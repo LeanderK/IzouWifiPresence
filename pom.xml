@@ -12,7 +12,7 @@
 
     <properties>
         <plugin.id>leanderk.izou.wifipresence</plugin.id>
-        <plugin.class>path.to.the.ZipFileManager</plugin.class>
+        <plugin.class>leanderk.izou.wifipresence.ZipFileManager</plugin.class>
         <plugin.version>0.5</plugin.version>
         <plugin.provider>Leander Kurscheidt</plugin.provider>
         <plugin.dependencies />

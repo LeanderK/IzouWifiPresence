@@ -1,6 +1,9 @@
 package leanderk.izou.wifipresence;
 
+import intellimate.izou.activator.Activator;
+import intellimate.izou.events.Event;
 import intellimate.izou.system.Context;
+import intellimate.izou.system.IdentificationManager;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -17,7 +20,8 @@ import java.util.concurrent.TimeUnit;
  * @author LeanderK
  * @version 1.0
  */
-public class WifiScanner {
+public class WifiScanner extends Activator{
+    public static final String ID = WifiScanner.class.getCanonicalName();
     private List<DiscoverService> discoverServiceList = Collections.synchronizedList(new ArrayList<>());
     private List<TrackingObject> trackingObjects = Collections.synchronizedList(new ArrayList<>());
     private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2);
@@ -26,8 +30,35 @@ public class WifiScanner {
     private ScheduledFuture<?> checkHostsFuture;
 
     public WifiScanner(Context context) {
+        super(context);
+        this.context = context;
+    }
+
+    /**
+     * Starting an Activator causes this method to be called.
+     *
+     * @throws InterruptedException will be caught by the Activator implementation, doesn't restart the activator
+     */
+    @Override
+    public void activatorStarts() throws InterruptedException {
         JmDNSDiscoverService jmDNSDiscoverService = new JmDNSDiscoverService(this, context);
         discoverServiceList.add(jmDNSDiscoverService);
+        scanWifi();
+    }
+
+    /**
+     * This method gets called when the Activator Thread got exceptionThrown.
+     * <p>
+     * This is an unusual way of ending a thread. The main reason for this should be, that the activator was interrupted
+     * by an uncaught exception.
+     *
+     * @param e if not null, the exception, which caused the termination
+     * @return true if the Thread should be restarted
+     */
+    @Override
+    public boolean terminated(Exception e) {
+        context.logger.getLogger().fatal("WifiScanner crashed", e);
+        return true;
     }
 
     /**
@@ -42,6 +73,16 @@ public class WifiScanner {
         if (!trackingObjects.contains(trackingObject)) {
             context.logger.getLogger().error("tracking " + trackingObject.getInetAddress().getHostAddress());
             trackingObjects.add(trackingObject);
+            try {
+                IdentificationManager.getInstance().getIdentification(this)
+                        .flatMap(id -> Event.createEvent(Event.NOTIFICATION, id))
+                        .orElseThrow(() -> new IllegalStateException("Unable to create Event"))
+                        .addDescriptor(AddOn.EVENT_ENTERED)
+                        .fire(getCaller(), (event, counter) -> counter <= 3,
+                                event -> getContext().logger.getLogger().error("failed to fire Event"));
+            } catch (IllegalStateException e) {
+                getContext().logger.getLogger().error("Unable to create Event");
+            }
         } else {
             context.logger.getLogger().error("already tracking " + trackingObject.getInetAddress().getHostAddress());
         }
@@ -66,7 +107,7 @@ public class WifiScanner {
             context.logger.getLogger().error("checking reachability for " + trackingObject.getInetAddress().getHostAddress());
             if (!trackingObject.isReachable()) {
                 context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress() + "is not reachable");
-                trackingObjects.remove(trackingObject);
+                remove(trackingObject);
             } else {
                 context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress() + "is reachable");
             }
@@ -83,10 +124,30 @@ public class WifiScanner {
             if (trackingObject.hostChanged()) {
                 context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress()
                         + "has a different host");
-                trackingObjects.remove(trackingObject);
+                remove(trackingObject);
             } else {
                 context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress()
                         + "has the same host");
+            }
+        }
+    }
+
+    /**
+     * removes a trackingObject
+     * @param trackingObject the TreckingObject to remove
+     */
+    public void remove(TrackingObject trackingObject) {
+        trackingObjects.remove(trackingObject);
+        if (trackingObjects.isEmpty()) {
+            try {
+                IdentificationManager.getInstance().getIdentification(this)
+                        .flatMap(id -> Event.createEvent(Event.NOTIFICATION, id))
+                        .orElseThrow(() -> new IllegalStateException("Unable to create Event"))
+                        .addDescriptor(AddOn.EVENT_LEFT)
+                        .fire(getCaller(), (event, counter) -> counter <= 3,
+                                event -> getContext().logger.getLogger().error("failed to fire Event"));
+            } catch (IllegalStateException e) {
+                getContext().logger.getLogger().error("Unable to create Event");
             }
         }
     }
@@ -126,5 +187,18 @@ public class WifiScanner {
                 e.printStackTrace();
             }
         }
+    }
+
+    /**
+     * An ID must always be unique.
+     * A Class like Activator or OutputPlugin can just provide their .class.getCanonicalName()
+     * If you have to implement this interface multiple times, just concatenate unique Strings to
+     * .class.getCanonicalName()
+     *
+     * @return A String containing an ID
+     */
+    @Override
+    public String getID() {
+        return ID;
     }
 }

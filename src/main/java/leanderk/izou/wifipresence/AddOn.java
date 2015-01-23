@@ -12,6 +12,10 @@ import intellimate.izou.output.OutputPlugin;
  */
 public class AddOn extends intellimate.izou.addon.AddOn{
     public static final String ID = AddOn.class.getCanonicalName();
+    public static final String EVENT_ENTERED = "izou.presence.general";
+    public static final String EVENT_LEFT = "izou.presence.general.leaving";
+    private WifiScanner wifiScanner;
+
     /**
      * the default constructor for AddOns
      */
@@ -24,7 +28,7 @@ public class AddOn extends intellimate.izou.addon.AddOn{
      */
     @Override
     public void prepare() {
-
+        wifiScanner = new WifiScanner(getContext());
     }
 
     /**
@@ -54,7 +58,9 @@ public class AddOn extends intellimate.izou.addon.AddOn{
      */
     @Override
     public EventsController[] registerEventController() {
-        return new EventsController[0];
+        EventsController[] eventsControllers = new EventsController[1];
+        eventsControllers[0] = new WifiPresenceEventsController(wifiScanner ,getContext());
+        return eventsControllers;
     }
 
     /**

@@ -72,14 +72,12 @@ public class JmDNSDiscoverService extends DiscoverService{
 
             @Override
             public void serviceRemoved(ServiceEvent serviceEvent) {
-                ServiceInfo[] serviceInfos = jmmDNS.getServiceInfos(serviceEvent.getType(), serviceEvent.getName());
-                //newDeviceFound(serviceInfos);
+                //not implemented yet
             }
 
             @Override
             public void serviceResolved(ServiceEvent serviceEvent) {
-                ServiceInfo[] serviceInfos = jmmDNS.getServiceInfos(serviceEvent.getType(), serviceEvent.getName());
-                newDeviceFound(serviceInfos);
+                //nothing to do....
             }
         };
     }
@@ -91,7 +89,9 @@ public class JmDNSDiscoverService extends DiscoverService{
                 for (InetAddress inetAddress : serviceInfo.getInetAddresses()) {
                     try {
                         if (inetAddress.isReachable(300)) {
-                            //newInetAddressDiscovered(inetAddress);
+                            newInetAddressDiscovered(new TrackingObject(() ->
+                                    checkHost(inetAddress, serviceInfo.getType(), serviceInfo.getName()), inetAddress));
+                            break;
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -99,5 +99,25 @@ public class JmDNSDiscoverService extends DiscoverService{
                 }
             }
         }
+    }
+
+    /**
+     * returns false if the InetAddress is not found in the Query for type and name
+     * @param address the InetAddress to check
+     * @param type the type of the service
+     * @param name the name of the device
+     * @return true if found, false if not
+     */
+    private boolean checkHost(InetAddress address, String type, String name) {
+        ServiceInfo[] serviceInfos = jmmDNS.getServiceInfos(type, name);
+        for (int i = 0; i < serviceInfos.length; i++) {
+            ServiceInfo serviceInfo = serviceInfos[i];
+            for (InetAddress inetAddress : serviceInfo.getInetAddresses()) {
+                if (inetAddress.equals(address)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

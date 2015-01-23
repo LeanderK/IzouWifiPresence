@@ -39,6 +39,11 @@
             <version>4.11</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>javax.jmdns</groupId>
+            <artifactId>jmdns</artifactId>
+            <version>3.4.1</version>
+        </dependency>
     </dependencies>
 
     <repositories>

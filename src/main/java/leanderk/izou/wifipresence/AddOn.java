@@ -38,7 +38,9 @@ public class AddOn extends intellimate.izou.addon.AddOn{
      */
     @Override
     public Activator[] registerActivator() {
-        return new Activator[0];
+        Activator[] activators = new Activator[1];
+        activators[0] = wifiScanner;
+        return activators;
     }
 
     /**

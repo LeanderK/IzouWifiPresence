@@ -1,0 +1,4 @@
+#you can set Host-Names (the name of the device you want to track) with:
+#hostname_<unique-digit> = <the hostname>
+#like: hostname_13 = Foo-Iphone
+#currently only supports the zeroconf-protocol

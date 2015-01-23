@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.util.HashMap;
 
 /**
+ * Uses zeroconf to discover devices
  * @author LeanderK
  * @version 1.0
  */
@@ -25,6 +26,9 @@ public class JmDNSDiscoverService extends DiscoverService{
         listenForNewServices();
     }
 
+    /**
+     * listens for all the available services.
+     */
     public void listenForNewServices() {
         serviceListener = new ServiceTypeListener() {
             @Override
@@ -82,6 +86,10 @@ public class JmDNSDiscoverService extends DiscoverService{
         };
     }
 
+    /**
+     * this method should be called when a new Device may be found
+     * @param serviceInfos the ServiceInfo object of the device
+     */
     private void newDeviceFound(ServiceInfo[] serviceInfos) {
         for (int i = 0; i < serviceInfos.length; i++) {
             ServiceInfo serviceInfo = serviceInfos[i];

@@ -17,13 +17,18 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * The WifiScanner holds the DiscoverServices, which discover devices, and tracks them.
+ * It pings every tracked device every second to check whether it is still there and verifies the hostname every 30
+ * seconds to check whether the Address still belongs to the interested HostName.
  * @author LeanderK
  * @version 1.0
  */
 public class WifiScanner extends Activator{
     public static final String ID = WifiScanner.class.getCanonicalName();
+    private static final String PROPERTIES_ID = "hostname_";
     private List<DiscoverService> discoverServiceList = Collections.synchronizedList(new ArrayList<>());
     private List<TrackingObject> trackingObjects = Collections.synchronizedList(new ArrayList<>());
+    private List<String> interestedHostNames = Collections.synchronizedList(new ArrayList<>());
     private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2);
     private Context context;
     private ScheduledFuture<?> reachabilityFuture;
@@ -41,9 +46,23 @@ public class WifiScanner extends Activator{
      */
     @Override
     public void activatorStarts() throws InterruptedException {
+        getContext().properties.getPropertiesContainer().getProperties().stringPropertyNames().stream()
+                .filter(key -> key.matches(PROPERTIES_ID + "\\d+"))
+                .map(getContext().properties::getProperties)
+                .forEach(interestedHostNames::add);
         JmDNSDiscoverService jmDNSDiscoverService = new JmDNSDiscoverService(this, context);
         discoverServiceList.add(jmDNSDiscoverService);
         scanWifi();
+    }
+
+    /**
+     * starts scanning the Wifi
+     */
+    public void scanWifi() {
+        reachabilityFuture =
+                scheduledExecutorService.scheduleAtFixedRate((Runnable) this::checkReachability, 0, 1, TimeUnit.SECONDS);
+        checkHostsFuture =
+                scheduledExecutorService.scheduleAtFixedRate((Runnable) this::checkHost, 0, 30, TimeUnit.SECONDS);
     }
 
     /**
@@ -89,13 +108,11 @@ public class WifiScanner extends Activator{
     }
 
     /**
-     * starts scanning the Wifi
+     * returns a List of interested HostNames
+     * @return a List
      */
-    public void scanWifi() {
-        reachabilityFuture =
-                scheduledExecutorService.scheduleAtFixedRate((Runnable) this::checkReachability, 0, 1, TimeUnit.SECONDS);
-        checkHostsFuture =
-                scheduledExecutorService.scheduleAtFixedRate((Runnable) this::checkHost, 0, 30, TimeUnit.SECONDS);
+    public List<String> getInterestedHostNames() {
+        return interestedHostNames;
     }
 
     /**
@@ -160,6 +177,11 @@ public class WifiScanner extends Activator{
         return !trackingObjects.isEmpty();
     }
 
+    /**
+     * checks whether we are already tracking the InetAddress
+     * @param inetAddress the InetAddress to check
+     * @return true if already tracking, false if not
+     */
     public boolean isAlreadyTracking(InetAddress inetAddress) {
         return trackingObjects.stream()
                 .map(TrackingObject::getInetAddress)

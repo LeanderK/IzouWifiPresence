@@ -1,10 +1,12 @@
 package leanderk.izou.wifipresence;
 
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * A Discover-Service is a Service, who is looking in the network for Devices we should track. It is not the purpose of
+ * the DiscoverService to track, only to discover.
+ * Use {@link #newInetAddressDiscovered(TrackingObject)} to start tracking it.
  * @author LeanderK
  * @version 1.0
  */
@@ -37,6 +39,6 @@ public class DiscoverService {
      * @return a list of hostnames
      */
     public List<String> getInterestedHostnames() {
-        return new ArrayList<>();
+        return wifiScanner.getInterestedHostNames();
     }
 }

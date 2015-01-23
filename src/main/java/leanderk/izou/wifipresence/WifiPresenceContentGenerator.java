@@ -9,6 +9,7 @@ import intellimate.izou.system.IdentificationManager;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * @author LeanderK
@@ -16,7 +17,8 @@ import java.util.Optional;
  */
 public class WifiPresenceContentGenerator extends ContentGenerator {
     public static final String ID = WifiPresenceContentGenerator.class.getCanonicalName();
-    private static final String RESOURCE_ID = "izou.presence.general";
+    private static final String RESOURCE_ID_GENERAL = "izou.presence.general";
+    private static final String RESOURCE_ID_PRESENCE = "izou.presence";
 
     private WifiScanner wifiScanner;
 
@@ -33,10 +35,13 @@ public class WifiPresenceContentGenerator extends ContentGenerator {
      */
     @Override
     public List<Resource> announceResources() {
-        return IdentificationManager.getInstance().getIdentification(this)
-                .map(id -> new Resource<Boolean>(RESOURCE_ID, id))
-                .orElse(new Resource<Boolean>(RESOURCE_ID))
-                .map(Arrays::asList);
+        Resource<Boolean> generalResource = IdentificationManager.getInstance().getIdentification(this)
+                .map(id -> new Resource<Boolean>(RESOURCE_ID_GENERAL, id))
+                .orElse(new Resource<Boolean>(RESOURCE_ID_GENERAL));
+        Resource<Boolean> presenceResource = IdentificationManager.getInstance().getIdentification(this)
+                .map(id -> new Resource<Boolean>(RESOURCE_ID_PRESENCE, id))
+                .orElse(new Resource<Boolean>(RESOURCE_ID_PRESENCE));
+        return Arrays.asList(generalResource, presenceResource);
     }
 
     /**
@@ -59,10 +64,11 @@ public class WifiPresenceContentGenerator extends ContentGenerator {
      */
     @Override
     public List<Resource> provideResource(List<Resource> resources, Optional<Event> event) {
-        return IdentificationManager.getInstance().getIdentification(this)
-                .map(id -> new Resource<Boolean>(RESOURCE_ID, id))
-                .orElseThrow(() -> new RuntimeException("Unable to create Event"))
-                .setResource(wifiScanner.anyPresent())
-                .map(Arrays::asList);
+        return resources.stream()
+                .map(resource -> new Resource<Boolean>(resource.getResourceID(),
+                        IdentificationManager.getInstance().getIdentification(this)
+                                .orElseThrow(() -> new RuntimeException("Unable to create Event, missing ID"))))
+                .map(resource -> resource.setResource(wifiScanner.anyPresent()))
+                .collect(Collectors.toList());
     }
 }

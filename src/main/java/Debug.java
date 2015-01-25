@@ -9,7 +9,7 @@ import java.util.LinkedList;
 public class Debug {
     public static void main(String[] args) {
         LinkedList<AddOn> addOns = new LinkedList<>();
-
+        addOns.add(new leanderk.izou.wifipresence.AddOn());
         Main main = new Main(addOns, true);
     }
 }

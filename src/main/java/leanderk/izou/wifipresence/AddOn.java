@@ -5,11 +5,13 @@ import intellimate.izou.contentgenerator.ContentGenerator;
 import intellimate.izou.events.EventsController;
 import intellimate.izou.output.OutputExtension;
 import intellimate.izou.output.OutputPlugin;
+import ro.fortsoft.pf4j.Extension;
 
 /**
  * @author LeanderK
  * @version 1.0
  */
+@Extension
 public class AddOn extends intellimate.izou.addon.AddOn{
     public static final String ID = AddOn.class.getCanonicalName();
     public static final String EVENT_ENTERED = "izou.presence.general";

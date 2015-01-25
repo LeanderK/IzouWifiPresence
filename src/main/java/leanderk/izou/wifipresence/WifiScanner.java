@@ -8,9 +8,8 @@ import intellimate.izou.system.IdentificationManager;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.time.LocalTime;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -27,9 +26,11 @@ public class WifiScanner extends Activator{
     public static final String ID = WifiScanner.class.getCanonicalName();
     private static final String PROPERTIES_ID = "hostname_";
     private List<DiscoverService> discoverServiceList = Collections.synchronizedList(new ArrayList<>());
-    private List<TrackingObject> trackingObjects = Collections.synchronizedList(new ArrayList<>());
+    private List<TrackingObject> trackingObjects = new ArrayList<>();
+    private List<TrackingObject> unreachableTrackingObjects = new ArrayList<>();
+    private Queue<TrackingObject> trackingObjectsToAdd = new ArrayDeque<>();
     private List<String> interestedHostNames = Collections.synchronizedList(new ArrayList<>());
-    private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2);
+    private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
     private Context context;
     private ScheduledFuture<?> reachabilityFuture;
     private ScheduledFuture<?> checkHostsFuture;
@@ -60,9 +61,9 @@ public class WifiScanner extends Activator{
      */
     public void scanWifi() {
         reachabilityFuture =
-                scheduledExecutorService.scheduleAtFixedRate((Runnable) this::checkReachability, 0, 1, TimeUnit.SECONDS);
+                scheduledExecutorService.scheduleAtFixedRate((Runnable) this::checkReachability, 0, 4, TimeUnit.SECONDS);
         checkHostsFuture =
-                scheduledExecutorService.scheduleAtFixedRate((Runnable) this::checkHost, 0, 30, TimeUnit.SECONDS);
+                scheduledExecutorService.scheduleAtFixedRate((Runnable) this::checkHostAndDoMaintenance, 0, 30, TimeUnit.SECONDS);
     }
 
     /**
@@ -88,20 +89,31 @@ public class WifiScanner extends Activator{
      * @param trackingObject the new InetAddress.
      */
     public void newInetAddressDiscovered(TrackingObject trackingObject) {
-        context.logger.getLogger().error("New request to track " + trackingObject.getInetAddress().getHostAddress());
-        if (!trackingObjects.contains(trackingObject)) {
+        context.logger.getLogger().debug("New request to track " + trackingObject.getInetAddress().getHostAddress());
+        trackingObjectsToAdd.add(trackingObject);
+    }
+
+    /**
+     * adds a TrackingObject to TrackingObjects
+     * @param trackingObject the new TrackingObject
+     */
+    public void addToTrackingObjects(TrackingObject trackingObject) {
+        if (!trackingObjects.stream()
+                .anyMatch(alreadyTracking -> alreadyTracking.getInetAddress().equals(trackingObject.getInetAddress()))) {
             context.logger.getLogger().error("tracking " + trackingObject.getInetAddress().getHostAddress());
-            trackingObjects.add(trackingObject);
-            try {
-                IdentificationManager.getInstance().getIdentification(this)
-                        .flatMap(id -> Event.createEvent(Event.NOTIFICATION, id))
-                        .orElseThrow(() -> new IllegalStateException("Unable to create Event"))
-                        .addDescriptor(AddOn.EVENT_ENTERED)
-                        .fire(getCaller(), (event, counter) -> counter <= 3,
-                                event -> getContext().logger.getLogger().error("failed to fire Event"));
-            } catch (IllegalStateException e) {
-                getContext().logger.getLogger().error("Unable to create Event");
+            if (trackingObjects.isEmpty()) {
+                try {
+                    IdentificationManager.getInstance().getIdentification(this)
+                            .flatMap(id -> Event.createEvent(Event.NOTIFICATION, id))
+                            .orElseThrow(() -> new IllegalStateException("Unable to create Event"))
+                            .addDescriptor(AddOn.EVENT_ENTERED)
+                            .fire(getCaller(), (event, counter) -> counter <= 3,
+                                    event -> getContext().logger.getLogger().error("failed to fire Event"));
+                } catch (IllegalStateException e) {
+                    getContext().logger.getLogger().error("Unable to create Event");
+                }
             }
+            trackingObjects.add(trackingObject);
         } else {
             context.logger.getLogger().error("already tracking " + trackingObject.getInetAddress().getHostAddress());
         }
@@ -119,49 +131,114 @@ public class WifiScanner extends Activator{
      * pings every tracking-Object
      */
     public void checkReachability() {
-        //noinspection Convert2streamapi
-        for (TrackingObject trackingObject : trackingObjects) {
-            context.logger.getLogger().error("checking reachability for " + trackingObject.getInetAddress().getHostAddress());
-            if (!trackingObject.isReachable()) {
-                context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress() + "is not reachable");
-                remove(trackingObject);
+        while (!trackingObjectsToAdd.isEmpty()) {
+            TrackingObject trackingObject = trackingObjectsToAdd.poll();
+            if (!trackingObjects.stream()
+                    .anyMatch(alreadyTracking -> alreadyTracking.getInetAddress().equals(trackingObject.getInetAddress()))) {
+                addToTrackingObjects(trackingObject);
             } else {
-                context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress() + "is reachable");
+                context.logger.getLogger().debug("already tracking " + trackingObject.getInetAddress().getHostAddress());
             }
+        }
+        try {
+            Iterator<TrackingObject> iterator = trackingObjects.iterator();
+
+            while (iterator.hasNext()) {
+                TrackingObject trackingObject = iterator.next();
+
+                //context.logger.getLogger().error("checking reachability for " + trackingObject.getInetAddress().getHostAddress());
+                if (!trackingObject.isReachable()) {
+                    context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress() + " is not reachable");
+                    iterator.remove();
+                    removedFromTrackingObjectsList();
+                    trackingObject.updateLimit();
+                    unreachableTrackingObjects.add(trackingObject);
+                } else {
+//                    context.logger.getLogger().debug(trackingObject.getInetAddress().getHostAddress() + " is reachable");
+                }
+            }
+
+            iterator = unreachableTrackingObjects.iterator();
+
+            while (iterator.hasNext()) {
+                TrackingObject trackingObject = iterator.next();
+
+                context.logger.getLogger().error("checking reachability for unreached "
+                        + trackingObject.getInetAddress().getHostAddress());
+                if (!trackingObject.isReachable()) {
+                    context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress() + " is still  not reachable");
+                } else {
+                    addToTrackingObjects(trackingObject);
+                    iterator.remove();
+                }
+            }
+        } catch (Exception e) {
+            context.logger.getLogger().error("An Error occured", e);
         }
     }
 
     /**
      * checks if the InetAddress we are pinging are still belonging to the Host we are interested in.
      */
-    public void checkHost() {
-        //noinspection Convert2streamapi
-        for(TrackingObject trackingObject : trackingObjects) {
-            context.logger.getLogger().error("checking host for " + trackingObject.getInetAddress().getHostAddress());
-            if (trackingObject.hostChanged()) {
-                context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress()
-                        + "has a different host");
-                remove(trackingObject);
-            } else {
-                context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress()
-                        + "has the same host");
+    public void checkHostAndDoMaintenance() {
+        try {
+
+            Iterator<TrackingObject> iterator = trackingObjects.iterator();
+
+            while (iterator.hasNext()) {
+                TrackingObject trackingObject = iterator.next();
+
+                //context.logger.getLogger().debug("checking host for " + trackingObject.getInetAddress().getHostAddress());
+                if (trackingObject.hostChanged()) {
+                    context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress()
+                            + " has a different host");
+                    iterator.remove();
+                    trackingObject.runRemovedCallback();
+                    removedFromTrackingObjectsList();
+                } else {
+//                    context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress()
+//                            + " has the same host");
+                }
             }
+
+            iterator = unreachableTrackingObjects.iterator();
+            LocalTime time = null;
+            while (iterator.hasNext()) {
+                TrackingObject trackingObject = iterator.next();
+                if (time == null) time = LocalTime.now();
+
+                if (trackingObject.getLimit().isBefore(time)) {
+                    context.logger.getLogger().error("unreachable"
+                            + trackingObject.getInetAddress().getHostAddress() + " Time-To-Live timed out");
+                    iterator.remove();
+                    trackingObject.runRemovedCallback();
+                }
+
+                context.logger.getLogger().error("checking host for unreachable"
+                        + trackingObject.getInetAddress().getHostAddress());
+                if (trackingObject.hostChanged()) {
+                    context.logger.getLogger().error("unreachable " + trackingObject.getInetAddress().getHostAddress()
+                            + " has a different host");
+                    iterator.remove();
+                }
+            }
+        } catch (Exception e) {
+            context.logger.getLogger().error("An error occured", e);
         }
     }
 
     /**
-     * removes a trackingObject
-     * @param trackingObject the TreckingObject to remove
+     * fires an event if no trackingobjects are left
      */
-    public void remove(TrackingObject trackingObject) {
-        trackingObjects.remove(trackingObject);
+    public void removedFromTrackingObjectsList() {
         if (trackingObjects.isEmpty()) {
             try {
                 IdentificationManager.getInstance().getIdentification(this)
                         .flatMap(id -> Event.createEvent(Event.NOTIFICATION, id))
                         .orElseThrow(() -> new IllegalStateException("Unable to create Event"))
                         .addDescriptor(AddOn.EVENT_LEFT)
-                        .fire(getCaller(), (event, counter) -> counter <= 3,
+                        .fire(getCaller(),
+                                (event, counter) -> counter <= 3,
                                 event -> getContext().logger.getLogger().error("failed to fire Event"));
             } catch (IllegalStateException e) {
                 getContext().logger.getLogger().error("Unable to create Event");
@@ -184,6 +261,10 @@ public class WifiScanner extends Activator{
      */
     public boolean isAlreadyTracking(InetAddress inetAddress) {
         return trackingObjects.stream()
+                .map(TrackingObject::getInetAddress)
+                .anyMatch(inet -> inet.equals(inetAddress))
+
+                || unreachableTrackingObjects.stream()
                 .map(TrackingObject::getInetAddress)
                 .anyMatch(inet -> inet.equals(inetAddress));
     }

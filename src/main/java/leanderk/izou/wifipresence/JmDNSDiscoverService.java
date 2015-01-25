@@ -5,40 +5,59 @@ import intellimate.izou.system.Context;
 import javax.jmdns.*;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Uses zeroconf to discover devices
  * @author LeanderK
  * @version 1.0
  */
-public class JmDNSDiscoverService extends DiscoverService{
-    private HashMap<String, ServiceListener> deviceListeners = new HashMap<>();
-    private ServiceTypeListener serviceListener;
+public class JmDNSDiscoverService extends DiscoverService {
+    @SuppressWarnings("FieldCanBeLocal")
+    private List<String> COMMON_SERVICES = Arrays.asList("_apple-mobdev2._tcp.local.");
+    private HashMap<String, ServiceListener> serviceListeners = new HashMap<>();
+    private HashMap<InetAddress, String> devices = new HashMap<>();
+    @SuppressWarnings("FieldCanBeLocal")
+    private ServiceTypeListener servicesListener;
     private Context context;
-    private JmmDNS jmmDNS;
+    private JmDNS jmDNS;
 
 
     public JmDNSDiscoverService(WifiScanner wifiScanner, Context context) {
         super(wifiScanner);
         this.context = context;
-        jmmDNS = JmmDNS.Factory.getInstance();
+        try {
+            jmDNS = JmDNS.create();
+        } catch (IOException e) {
+            context.logger.getLogger().fatal("unable to creat JmDNS", e);
+            return;
+        }
+        initJmDNS();
+    }
+
+    private void initJmDNS() {
+        serviceListeners.entrySet().stream()
+                .forEach(entry -> jmDNS.addServiceListener(entry.getKey(), entry.getValue()));
+        COMMON_SERVICES.forEach(this::addServiceListener);
         listenForNewServices();
     }
 
     /**
      * listens for all the available services.
      */
-    public void listenForNewServices() {
-        serviceListener = new ServiceTypeListener() {
+    private void listenForNewServices() {
+        servicesListener = new ServiceTypeListener() {
             @Override
             public void serviceTypeAdded(ServiceEvent serviceEvent) {
-                jmmDNS.addServiceListener(serviceEvent.getType(), createNewDeviceListener());
+                addServiceListener(serviceEvent.getType());
             }
 
             @Override
             public void subTypeForServiceTypeAdded(ServiceEvent serviceEvent) {
-                jmmDNS.addServiceListener(serviceEvent.getType(), createNewDeviceListener());
+                addServiceListener(serviceEvent.getType());
             }
         };
         try {
@@ -47,30 +66,36 @@ public class JmDNSDiscoverService extends DiscoverService{
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            jmmDNS.addServiceTypeListener(serviceListener);
+            jmDNS.addServiceTypeListener(servicesListener);
         } catch (IOException e) {
-            e.printStackTrace();
+            context.logger.getLogger().error("unable to add ");
         }
     }
 
-    /**
-     * method used to listen for new Services
-     * @param serviceEvent the Service discovered
-     */
-    private void newServiceDiscovered(ServiceEvent serviceEvent) {
-        ServiceListener serviceListener = createNewDeviceListener();
-        deviceListeners.put(serviceEvent.getType(), serviceListener);
+    private void addServiceListener(String type) {
+        if (!serviceListeners.containsKey(type)) {
+            context.logger.getLogger().debug("Service: " + type + " discovered");
+            jmDNS.addServiceListener(type, createNewDeviceListener(type));
+        }
     }
 
     /**
      * creates a new ServiceListener, which should be used to listen to new Devices
      * @return an ServiceListener
      */
-    private ServiceListener createNewDeviceListener() {
-        return new ServiceListener() {
+    private ServiceListener createNewDeviceListener(ServiceEvent serviceEvent) {
+        return createNewDeviceListener(serviceEvent.getType());
+    }
+
+    /**
+     * creates a new ServiceListener, which should be used to listen to new Devices
+     * @return an ServiceListener
+     */
+    private ServiceListener createNewDeviceListener(String type) {
+        ServiceListener listener = new ServiceListener() {
             @Override
             public void serviceAdded(ServiceEvent serviceEvent) {
-                ServiceInfo[] serviceInfos = jmmDNS.getServiceInfos(serviceEvent.getType(), serviceEvent.getName());
+                ServiceInfo serviceInfos = jmDNS.getServiceInfo(serviceEvent.getType(), serviceEvent.getName());
                 newDeviceFound(serviceInfos);
             }
 
@@ -81,28 +106,40 @@ public class JmDNSDiscoverService extends DiscoverService{
 
             @Override
             public void serviceResolved(ServiceEvent serviceEvent) {
-                //nothing to do....
+                //System.out.println("HEY");
             }
         };
+        serviceListeners.put(type, listener);
+        ServiceInfo[] list = jmDNS.list(type);
+        return listener;
     }
 
     /**
      * this method should be called when a new Device may be found
-     * @param serviceInfos the ServiceInfo object of the device
+     * @param serviceInfo the ServiceInfo object of the device
      */
-    private void newDeviceFound(ServiceInfo[] serviceInfos) {
-        for (int i = 0; i < serviceInfos.length; i++) {
-            ServiceInfo serviceInfo = serviceInfos[i];
-            if (getInterestedHostnames().contains(serviceInfo.getServer())) {
-                for (InetAddress inetAddress : serviceInfo.getInetAddresses()) {
-                    try {
-                        if (inetAddress.isReachable(300)) {
-                            newInetAddressDiscovered(new TrackingObject(() ->
-                                    checkHost(inetAddress, serviceInfo.getType(), serviceInfo.getName()), inetAddress));
-                            break;
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
+    private void newDeviceFound(ServiceInfo serviceInfo) {
+        if (getInterestedHostnames().stream().anyMatch(string -> serviceInfo.getServer().startsWith(string))) {
+            InetAddress[] inetAddresses = serviceInfo.getInetAddresses();
+            for (int i = 0; i < inetAddresses.length; i++) {
+                InetAddress inetAddress = inetAddresses[i];
+                try {
+                    if (inetAddress.isReachable(300)) {
+                        devices.put(inetAddress, serviceInfo.getType());
+                        newInetAddressDiscovered(new TrackingObject(
+                                () -> !checkHost(inetAddress, serviceInfo.getType(), serviceInfo.getName()),
+                                inet -> trackingObjectRemoved(inetAddress),
+                                inetAddress,
+                                LocalTime.of(1, 0)));
+                        return;
+                    }
+                } catch (IOException e) {
+                    context.logger.getLogger().error("An error occurred while trying to reach device", e);
+                    //it can cause JmDNS to ignore the device for and hour or longer!
+                    //last inetAddress?
+                    if (i + 1 == inetAddresses.length) {
+                        restartJmDNS();
+                        return;
                     }
                 }
             }
@@ -117,15 +154,53 @@ public class JmDNSDiscoverService extends DiscoverService{
      * @return true if found, false if not
      */
     private boolean checkHost(InetAddress address, String type, String name) {
-        ServiceInfo[] serviceInfos = jmmDNS.getServiceInfos(type, name);
-        for (int i = 0; i < serviceInfos.length; i++) {
-            ServiceInfo serviceInfo = serviceInfos[i];
-            for (InetAddress inetAddress : serviceInfo.getInetAddresses()) {
-                if (inetAddress.equals(address)) {
-                    return true;
-                }
+        ServiceInfo serviceInfo = jmDNS.getServiceInfo(type, name);
+        if (serviceInfo == null) return false;
+        for (InetAddress inetAddress : serviceInfo.getInetAddresses()) {
+            if (inetAddress.equals(address)) {
+                return true;
             }
         }
         return false;
+    }
+
+    private void trackingObjectRemoved (InetAddress inetAddress) {
+        String type = devices.get(inetAddress);
+        //way better! but not working right :/
+        /*
+        JmDNSImpl jmDNS1 = (JmDNSImpl) jmDNS;
+        if (type != null) {
+            ServiceListener listener = serviceListeners.get(type);
+            jmDNS.removeServiceListener(type, listener);
+            jmDNS1.getCache().getDNSEntryList(type).forEach(entry -> jmDNS1.getCache().removeDNSEntry(entry));
+            jmDNS1.cleanCache();
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            //jmDNS1.renewServiceCollector(new DNSRecordWithType(type));
+            jmDNS.addServiceListener(type, createNewDeviceListener(type));
+        }*/
+        restartJmDNS();
+    }
+
+    /**
+     * expensive operation! Restarts the whole thing!
+     * MUST find a workaround to get JmDNS forget devices.
+     */
+    private void restartJmDNS() {
+        try {
+            jmDNS.close();
+        } catch (IOException e) {
+            context.logger.getLogger().error("Unable to close JmDNS", e);
+        }
+        try {
+            jmDNS = JmDNS.create();
+        } catch (IOException e) {
+            context.logger.getLogger().fatal("unable to creat JmDNS", e);
+            return;
+        }
+        initJmDNS();
     }
 }

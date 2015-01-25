@@ -3,12 +3,15 @@ package leanderk.izou.wifipresence;
 import intellimate.izou.system.Context;
 
 import javax.jmdns.*;
+import javax.jmdns.impl.DNSIncoming;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Uses zeroconf to discover devices
@@ -39,6 +42,8 @@ public class JmDNSDiscoverService extends DiscoverService {
     }
 
     private void initJmDNS() {
+        Logger logger = Logger.getLogger(DNSIncoming.class.getName());
+        logger.setLevel(Level.SEVERE);
         serviceListeners.entrySet().stream()
                 .forEach(entry -> jmDNS.addServiceListener(entry.getKey(), entry.getValue()));
         COMMON_SERVICES.forEach(this::addServiceListener);

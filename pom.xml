@@ -7,13 +7,13 @@
     <groupId>leanderk.izou.wifipresence</groupId>
     <artifactId>wifipresence</artifactId>
     <packaging>jar</packaging>
-    <version>0.5-SNAPSHOT</version>
+    <version>0.8-SNAPSHOT</version>
     <name></name>
 
     <properties>
         <plugin.id>leanderk.izou.wifipresence</plugin.id>
         <plugin.class>leanderk.izou.wifipresence.ZipFileManager</plugin.class>
-        <plugin.version>0.5</plugin.version>
+        <plugin.version>0.8</plugin.version>
         <plugin.provider>Leander Kurscheidt</plugin.provider>
         <plugin.dependencies />
         <repo.name>IzouWifiPresence</repo.name>

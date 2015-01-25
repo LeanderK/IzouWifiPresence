@@ -104,7 +104,7 @@ public class WifiScanner extends Activator{
             if (trackingObjects.isEmpty()) {
                 try {
                     IdentificationManager.getInstance().getIdentification(this)
-                            .flatMap(id -> Event.createEvent(Event.RESPONSE, id))
+                            .flatMap(id -> Event.createEvent(Event.NOTIFICATION, id))
                             .orElseThrow(() -> new IllegalStateException("Unable to create Event"))
                             .addDescriptor(AddOn.EVENT_ENTERED)
                             .fire(getCaller(), (event, counter) -> counter <= 3,
@@ -234,7 +234,7 @@ public class WifiScanner extends Activator{
         if (trackingObjects.isEmpty()) {
             try {
                 IdentificationManager.getInstance().getIdentification(this)
-                        .flatMap(id -> Event.createEvent(Event.RESPONSE, id))
+                        .flatMap(id -> Event.createEvent(Event.NOTIFICATION, id))
                         .orElseThrow(() -> new IllegalStateException("Unable to create Event"))
                         .addDescriptor(AddOn.EVENT_LEFT)
                         .fire(getCaller(),

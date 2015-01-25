@@ -16,6 +16,7 @@ public class TrackingObject {
     private BooleanSupplier hostChanged;
     private Consumer<InetAddress> removed;
     private InetAddress inetAddress;
+    private String hostname;
     private LocalTime ttl;
     private LocalTime limit;
     private int unreachableCount = 0;
@@ -23,8 +24,8 @@ public class TrackingObject {
     private int hostChangedCount = 0;
     private int hostChangedLimit = 4;
 
-    public TrackingObject(BooleanSupplier hostChanged, Consumer<InetAddress> removed, InetAddress inetAddress) {
-        this(hostChanged, removed, inetAddress, null);
+    public TrackingObject(BooleanSupplier hostChanged, Consumer<InetAddress> removed, InetAddress inetAddress, String hostname) {
+        this(hostChanged, removed, inetAddress, hostname, null);
     }
 
     /**
@@ -32,15 +33,18 @@ public class TrackingObject {
      * @param hostChanged whether the InetAddress still belongs to the same host
      * @param removed callback on removed (after TTL)
      * @param inetAddress the InetAddress
+     * @param hostname the hostname of the InetAddress
      * @param ttl the time to live after becoming unreachable
      */
     public TrackingObject(BooleanSupplier hostChanged,
                           Consumer<InetAddress> removed,
                           InetAddress inetAddress,
+                          String hostname,
                           LocalTime ttl) {
         this.hostChanged = hostChanged;
         this.inetAddress = inetAddress;
         this.removed = removed;
+        this.hostname = hostname;
         this.ttl = ttl;
     }
 
@@ -65,6 +69,14 @@ public class TrackingObject {
      */
     public InetAddress getInetAddress() {
         return inetAddress;
+    }
+
+    /**
+     * returns the Hostname
+     * @return a String containing the Hostname
+     */
+    public String getHostname() {
+        return hostname;
     }
 
     /**
@@ -105,5 +117,13 @@ public class TrackingObject {
         limit = LocalTime.now();
         if (ttl != null)
             limit = limit.plusHours(ttl.getHour()).plusMinutes(ttl.getMinute());
+    }
+
+    @Override
+    public String toString() {
+        return "TrackingObject{" +
+                "hostname='" + hostname + '\'' +
+                ", inetAddress=" + inetAddress +
+                '}';
     }
 }

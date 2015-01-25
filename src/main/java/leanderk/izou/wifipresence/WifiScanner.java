@@ -89,7 +89,7 @@ public class WifiScanner extends Activator{
      * @param trackingObject the new InetAddress.
      */
     public void newInetAddressDiscovered(TrackingObject trackingObject) {
-        context.logger.getLogger().debug("New request to track " + trackingObject.getInetAddress().getHostAddress());
+        context.logger.getLogger().debug("New request to track " + trackingObject.toString());
         trackingObjectsToAdd.add(trackingObject);
     }
 
@@ -99,8 +99,8 @@ public class WifiScanner extends Activator{
      */
     public void addToTrackingObjects(TrackingObject trackingObject) {
         if (!trackingObjects.stream()
-                .anyMatch(alreadyTracking -> alreadyTracking.getInetAddress().equals(trackingObject.getInetAddress()))) {
-            context.logger.getLogger().error("tracking " + trackingObject.getInetAddress().getHostAddress());
+                .anyMatch(alreadyTracking -> alreadyTracking.getHostname().equals(trackingObject.getHostname()))) {
+            context.logger.getLogger().error("tracking " + trackingObject.toString());
             if (trackingObjects.isEmpty()) {
                 try {
                     IdentificationManager.getInstance().getIdentification(this)
@@ -115,7 +115,7 @@ public class WifiScanner extends Activator{
             }
             trackingObjects.add(trackingObject);
         } else {
-            context.logger.getLogger().error("already tracking " + trackingObject.getInetAddress().getHostAddress());
+            context.logger.getLogger().error("already tracking " + trackingObject.toString());
         }
     }
 
@@ -133,12 +133,7 @@ public class WifiScanner extends Activator{
     public void checkReachability() {
         while (!trackingObjectsToAdd.isEmpty()) {
             TrackingObject trackingObject = trackingObjectsToAdd.poll();
-            if (!trackingObjects.stream()
-                    .anyMatch(alreadyTracking -> alreadyTracking.getInetAddress().equals(trackingObject.getInetAddress()))) {
-                addToTrackingObjects(trackingObject);
-            } else {
-                context.logger.getLogger().debug("already tracking " + trackingObject.getInetAddress().getHostAddress());
-            }
+            addToTrackingObjects(trackingObject);
         }
         try {
             Iterator<TrackingObject> iterator = trackingObjects.iterator();
@@ -148,7 +143,7 @@ public class WifiScanner extends Activator{
 
                 //context.logger.getLogger().error("checking reachability for " + trackingObject.getInetAddress().getHostAddress());
                 if (!trackingObject.isReachable()) {
-                    context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress() + " is not reachable");
+                    context.logger.getLogger().error(trackingObject.toString() + " is not reachable");
                     iterator.remove();
                     removedFromTrackingObjectsList();
                     trackingObject.updateLimit();
@@ -164,9 +159,9 @@ public class WifiScanner extends Activator{
                 TrackingObject trackingObject = iterator.next();
 
                 context.logger.getLogger().error("checking reachability for unreached "
-                        + trackingObject.getInetAddress().getHostAddress());
+                        + trackingObject.toString());
                 if (!trackingObject.isReachable()) {
-                    context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress() + " is still  not reachable");
+                    context.logger.getLogger().error(trackingObject.toString() + " is still  not reachable");
                 } else {
                     addToTrackingObjects(trackingObject);
                     iterator.remove();
@@ -190,8 +185,7 @@ public class WifiScanner extends Activator{
 
                 //context.logger.getLogger().debug("checking host for " + trackingObject.getInetAddress().getHostAddress());
                 if (trackingObject.hostChanged()) {
-                    context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress()
-                            + " has a different host");
+                    context.logger.getLogger().error(trackingObject.toString() + " has a different host");
                     iterator.remove();
                     trackingObject.runRemovedCallback();
                     removedFromTrackingObjectsList();
@@ -209,7 +203,7 @@ public class WifiScanner extends Activator{
 
                 if (trackingObject.getLimit().isBefore(time)) {
                     context.logger.getLogger().error("unreachable"
-                            + trackingObject.getInetAddress().getHostAddress() + " Time-To-Live timed out");
+                            + trackingObject.toString() + " Time-To-Live timed out");
                     iterator.remove();
                     trackingObject.runRemovedCallback();
                 }
@@ -217,8 +211,7 @@ public class WifiScanner extends Activator{
                 context.logger.getLogger().error("checking host for unreachable"
                         + trackingObject.getInetAddress().getHostAddress());
                 if (trackingObject.hostChanged()) {
-                    context.logger.getLogger().error("unreachable " + trackingObject.getInetAddress().getHostAddress()
-                            + " has a different host");
+                    context.logger.getLogger().error("unreachable " + trackingObject.toString() + " has a different host");
                     iterator.remove();
                 }
             }

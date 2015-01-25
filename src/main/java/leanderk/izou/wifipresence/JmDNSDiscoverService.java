@@ -10,6 +10,7 @@ import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -112,6 +113,8 @@ public class JmDNSDiscoverService extends DiscoverService {
             @Override
             public void serviceResolved(ServiceEvent serviceEvent) {
                 //System.out.println("HEY");
+                ServiceInfo serviceInfos = jmDNS.getServiceInfo(serviceEvent.getType(), serviceEvent.getName());
+                newDeviceFound(serviceInfos);
             }
         };
         serviceListeners.put(type, listener);
@@ -124,27 +127,42 @@ public class JmDNSDiscoverService extends DiscoverService {
      * @param serviceInfo the ServiceInfo object of the device
      */
     private void newDeviceFound(ServiceInfo serviceInfo) {
-        if (getInterestedHostnames().stream().anyMatch(string -> serviceInfo.getServer().startsWith(string))) {
-            InetAddress[] inetAddresses = serviceInfo.getInetAddresses();
-            for (int i = 0; i < inetAddresses.length; i++) {
-                InetAddress inetAddress = inetAddresses[i];
-                try {
-                    if (inetAddress.isReachable(300)) {
-                        devices.put(inetAddress, serviceInfo.getType());
-                        newInetAddressDiscovered(new TrackingObject(
-                                () -> !checkHost(inetAddress, serviceInfo.getType(), serviceInfo.getName()),
-                                inet -> trackingObjectRemoved(inetAddress),
-                                inetAddress,
-                                LocalTime.of(1, 0)));
-                        return;
-                    }
-                } catch (IOException e) {
-                    context.logger.getLogger().error("An error occurred while trying to reach device", e);
-                    //it can cause JmDNS to ignore the device for and hour or longer!
-                    //last inetAddress?
-                    if (i + 1 == inetAddresses.length) {
-                        restartJmDNS();
-                        return;
+        Optional<String> first = getInterestedHostnames().stream()
+                    .filter(interested -> serviceInfo.getServer().contains(interested))
+                    .findFirst();
+        if (first.isPresent()) {
+            for (int x = 0; x < 2; x++) {
+                InetAddress[] inetAddresses;
+                if (x == 0) {
+                    inetAddresses = serviceInfo.getInet4Addresses();
+                } else {
+                    inetAddresses = serviceInfo.getInet6Addresses();
+                }
+                if (inetAddresses == null)
+                    continue;
+                for (int i = 0; i < inetAddresses.length; i++) {
+                    InetAddress inetAddress = inetAddresses[i];
+                    try {
+                        if (inetAddress.isReachable(300)) {
+                            devices.put(inetAddress, serviceInfo.getType());
+                            newInetAddressDiscovered(new TrackingObject(
+                                    () -> !checkHost(inetAddress, serviceInfo.getType(), serviceInfo.getName()),
+                                    inet -> trackingObjectRemoved(inetAddress),
+                                    inetAddress,
+                                    first.get(),
+                                    LocalTime.of(1, 0)));
+                            return;
+                        }
+                    } catch (IOException e) {
+                        context.logger.getLogger().debug("An error occurred while trying to reach device," +
+                                "unfortunately this is fairly common. InetAddress: " + inetAddress.toString() + " " +
+                                +(i + 1) + "from " + inetAddresses.length, e);
+                        //it can cause JmDNS to ignore the device for and hour or longer!
+                        //last inetAddress?
+                        if (i + 1 == inetAddresses.length) {
+                            restartJmDNS();
+                            return;
+                        }
                     }
                 }
             }

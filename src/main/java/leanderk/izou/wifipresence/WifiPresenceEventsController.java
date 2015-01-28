@@ -28,7 +28,10 @@ public class WifiPresenceEventsController implements EventsController {
      */
     @Override
     public boolean controlEventDispatcher(Event event) {
-        return wifiScanner.anyPresent();
+        if (!event.containsDescriptor("izou.alarm")) {
+            return wifiScanner.anyPresent();
+        }
+        return true;
     }
 
     /**

@@ -107,7 +107,8 @@ public class WifiScanner extends Activator{
                             .flatMap(id -> Event.createEvent(Event.NOTIFICATION, id))
                             .orElseThrow(() -> new IllegalStateException("Unable to create Event"))
                             .addDescriptor(AddOn.EVENT_ENTERED)
-                            .fire(getCaller(), (event, counter) -> counter <= 3,
+                            .fire(getCaller(),
+                                    (event, counter) -> counter <= 3,
                                     event -> getContext().logger.getLogger().error("failed to fire Event"));
                 } catch (IllegalStateException e) {
                     getContext().logger.getLogger().error("Unable to create Event");
@@ -201,11 +202,12 @@ public class WifiScanner extends Activator{
                 TrackingObject trackingObject = iterator.next();
                 if (time == null) time = LocalTime.now();
 
-                if (trackingObject.getLimit().isBefore(time)) {
+                if (trackingObject.getLimit().isAfter(time)) {
                     context.logger.getLogger().error("unreachable"
                             + trackingObject.toString() + " Time-To-Live timed out");
                     iterator.remove();
                     trackingObject.runRemovedCallback();
+                    continue;
                 }
 
                 context.logger.getLogger().error("checking host for unreachable"
@@ -253,13 +255,15 @@ public class WifiScanner extends Activator{
      * @return true if already tracking, false if not
      */
     public boolean isAlreadyTracking(InetAddress inetAddress) {
-        return trackingObjects.stream()
-                .map(TrackingObject::getInetAddress)
-                .anyMatch(inet -> inet.equals(inetAddress))
-
-                || unreachableTrackingObjects.stream()
+        boolean reachable = trackingObjects.stream()
                 .map(TrackingObject::getInetAddress)
                 .anyMatch(inet -> inet.equals(inetAddress));
+
+        boolean unreachable = unreachableTrackingObjects.stream()
+                .map(TrackingObject::getInetAddress)
+                .anyMatch(inet -> inet.equals(inetAddress));
+
+        return reachable || unreachable;
     }
 
     public void develop() {

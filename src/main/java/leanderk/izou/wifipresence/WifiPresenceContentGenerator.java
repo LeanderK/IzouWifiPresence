@@ -9,6 +9,7 @@ import intellimate.izou.system.IdentificationManager;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -17,8 +18,7 @@ import java.util.stream.Collectors;
  */
 public class WifiPresenceContentGenerator extends ContentGenerator {
     public static final String ID = WifiPresenceContentGenerator.class.getCanonicalName();
-    private static final String RESOURCE_ID_GENERAL = "izou.presence.general";
-    private static final String RESOURCE_ID_PRESENCE = "izou.presence";
+    public static final List<String> RESOURCE_IDS = Arrays.asList("izou.presence.general", "izou.presence");
 
     private WifiScanner wifiScanner;
 
@@ -35,13 +35,15 @@ public class WifiPresenceContentGenerator extends ContentGenerator {
      */
     @Override
     public List<Resource> announceResources() {
-        Resource<Boolean> generalResource = IdentificationManager.getInstance().getIdentification(this)
-                .map(id -> new Resource<Boolean>(RESOURCE_ID_GENERAL, id))
-                .orElse(new Resource<Boolean>(RESOURCE_ID_GENERAL));
-        Resource<Boolean> presenceResource = IdentificationManager.getInstance().getIdentification(this)
-                .map(id -> new Resource<Boolean>(RESOURCE_ID_PRESENCE, id))
-                .orElse(new Resource<Boolean>(RESOURCE_ID_PRESENCE));
-        return Arrays.asList(generalResource, presenceResource);
+        //noinspection Convert2Diamond
+        Function<String, Resource<Boolean>> constructResource = resourceId ->
+                IdentificationManager.getInstance().getIdentification(this)
+                .map(identification -> new Resource<Boolean>(resourceId, identification))
+                .orElse(new Resource<Boolean>(resourceId));
+
+        return RESOURCE_IDS.stream()
+                .map(constructResource::apply)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -64,6 +66,7 @@ public class WifiPresenceContentGenerator extends ContentGenerator {
      */
     @Override
     public List<Resource> provideResource(List<Resource> resources, Optional<Event> event) {
+        //noinspection Convert2Diamond
         return resources.stream()
                 .map(resource -> new Resource<Boolean>(resource.getResourceID(),
                         IdentificationManager.getInstance().getIdentification(this)

@@ -52,7 +52,9 @@ public class AddOn extends intellimate.izou.addon.AddOn{
      */
     @Override
     public ContentGenerator[] registerContentGenerator() {
-        return new ContentGenerator[0];
+        ContentGenerator[] contentGenerators = new ContentGenerator[1];
+        contentGenerators[0] = new WifiPresenceContentGenerator(getContext(), wifiScanner);
+        return contentGenerators;
     }
 
     /**

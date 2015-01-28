@@ -154,9 +154,9 @@ public class JmDNSDiscoverService extends DiscoverService {
                             return;
                         }
                     } catch (IOException e) {
-                        context.logger.getLogger().debug("An error occurred while trying to reach device," +
-                                "unfortunately this is fairly common. InetAddress: " + inetAddress.toString() + " " +
-                                +(i + 1) + "from " + inetAddresses.length, e);
+                        context.logger.getLogger().error("An error occurred while trying to reach device," +
+                                " unfortunately this is fairly common. InetAddress: " + inetAddress.toString() + " " +
+                                +(i + 1) + " from " + inetAddresses.length);
                         //it can cause JmDNS to ignore the device for and hour or longer!
                         //last inetAddress?
                         if (i + 1 == inetAddresses.length) {
@@ -213,6 +213,7 @@ public class JmDNSDiscoverService extends DiscoverService {
      * MUST find a workaround to get JmDNS forget devices.
      */
     private void restartJmDNS() {
+        context.logger.getLogger().debug("restarting JmDNS");
         try {
             jmDNS.close();
         } catch (IOException e) {

@@ -12,7 +12,6 @@ import java.util.List;
  */
 public class DiscoverService {
     private WifiScanner wifiScanner;
-
     public DiscoverService(WifiScanner wifiScanner) {
         this.wifiScanner = wifiScanner;
     }

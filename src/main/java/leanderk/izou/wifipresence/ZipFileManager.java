@@ -6,7 +6,7 @@ import ro.fortsoft.pf4j.PluginWrapper;
  * @author LeanderK
  * @version 1.0
  */
-public class ZipFileManager extends intellimate.izou.addon.ZipFileManager {
+public class ZipFileManager extends org.intellimate.izou.sdk.addon.ZipFileManager {
     /**
      * Constructor to be used by plugin manager for plugin instantiation.
      * Your plugins have to provide constructor with this exact signature to

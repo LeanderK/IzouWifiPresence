@@ -1,6 +1,6 @@
 package leanderk.izou.wifipresence;
 
-import intellimate.izou.system.Context;
+import org.intellimate.izou.sdk.Context;
 
 import javax.jmdns.*;
 import javax.jmdns.impl.DNSIncoming;
@@ -26,9 +26,8 @@ public class JmDNSDiscoverService extends DiscoverService {
     private HashMap<InetAddress, String> devices = new HashMap<>();
     @SuppressWarnings("FieldCanBeLocal")
     private ServiceTypeListener servicesListener;
-    private Context context;
+    private final Context context;
     private JmDNS jmDNS;
-
 
     public JmDNSDiscoverService(WifiScanner wifiScanner, Context context) {
         super(wifiScanner);
@@ -36,7 +35,7 @@ public class JmDNSDiscoverService extends DiscoverService {
         try {
             jmDNS = JmDNS.create();
         } catch (IOException e) {
-            context.logger.getLogger().fatal("unable to creat JmDNS", e);
+            context.getLogger().fatal("unable to creat JmDNS", e);
             return;
         }
         initJmDNS();
@@ -74,13 +73,13 @@ public class JmDNSDiscoverService extends DiscoverService {
             }
             jmDNS.addServiceTypeListener(servicesListener);
         } catch (IOException e) {
-            context.logger.getLogger().error("unable to add ");
+            context.getLogger().error("unable to add ");
         }
     }
 
     private void addServiceListener(String type) {
         if (!serviceListeners.containsKey(type)) {
-            context.logger.getLogger().debug("Service: " + type + " discovered");
+            context.getLogger().debug("Service: " + type + " discovered");
             jmDNS.addServiceListener(type, createNewDeviceListener(type));
         }
     }
@@ -154,7 +153,7 @@ public class JmDNSDiscoverService extends DiscoverService {
                             return;
                         }
                     } catch (IOException e) {
-                        context.logger.getLogger().error("An error occurred while trying to reach device," +
+                        context.getLogger().error("An error occurred while trying to reach device," +
                                 " unfortunately this is fairly common. InetAddress: " + inetAddress.toString() + " " +
                                 +(i + 1) + " from " + inetAddresses.length);
                         //it can cause JmDNS to ignore the device for and hour or longer!
@@ -213,16 +212,16 @@ public class JmDNSDiscoverService extends DiscoverService {
      * MUST find a workaround to get JmDNS forget devices.
      */
     private void restartJmDNS() {
-        context.logger.getLogger().debug("restarting JmDNS");
+        context.getLogger().debug("restarting JmDNS");
         try {
             jmDNS.close();
         } catch (IOException e) {
-            context.logger.getLogger().error("Unable to close JmDNS", e);
+            context.getLogger().error("Unable to close JmDNS", e);
         }
         try {
             jmDNS = JmDNS.create();
         } catch (IOException e) {
-            context.logger.getLogger().fatal("unable to creat JmDNS", e);
+            context.getLogger().fatal("unable to creat JmDNS", e);
             return;
         }
         initJmDNS();

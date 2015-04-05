@@ -1,10 +1,10 @@
 package leanderk.izou.wifipresence;
 
-import intellimate.izou.activator.Activator;
-import intellimate.izou.contentgenerator.ContentGenerator;
-import intellimate.izou.events.EventsController;
-import intellimate.izou.output.OutputExtension;
-import intellimate.izou.output.OutputPlugin;
+import org.intellimate.izou.events.EventsControllerModel;
+import org.intellimate.izou.sdk.activator.Activator;
+import org.intellimate.izou.sdk.contentgenerator.ContentGenerator;
+import org.intellimate.izou.sdk.output.OutputExtension;
+import org.intellimate.izou.sdk.output.OutputPlugin;
 import ro.fortsoft.pf4j.Extension;
 
 /**
@@ -12,7 +12,7 @@ import ro.fortsoft.pf4j.Extension;
  * @version 1.0
  */
 @Extension
-public class AddOn extends intellimate.izou.addon.AddOn{
+public class AddOn extends org.intellimate.izou.sdk.addon.AddOn{
     public static final String ID = AddOn.class.getCanonicalName();
     public static final String EVENT_ENTERED = "izou.presence.general";
     public static final String EVENT_LEFT = "izou.presence.general.leaving";
@@ -63,8 +63,8 @@ public class AddOn extends intellimate.izou.addon.AddOn{
      * @return Array containing Instances of EventControllers
      */
     @Override
-    public EventsController[] registerEventController() {
-        EventsController[] eventsControllers = new EventsController[1];
+    public EventsControllerModel[] registerEventController() {
+        EventsControllerModel[] eventsControllers = new EventsControllerModel[1];
         eventsControllers[0] = new WifiPresenceEventsController(wifiScanner ,getContext());
         return eventsControllers;
     }

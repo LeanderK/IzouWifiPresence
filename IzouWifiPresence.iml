@@ -18,13 +18,13 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="Maven: org.intellimate.izou:sdk:0.5.23" level="project" />
-    <orderEntry type="library" name="Maven: org.intellimate.izou:izou:1.5.18" level="project" />
+    <orderEntry type="library" name="Maven: org.intellimate.izou:sdk:0.6.1" level="project" />
+    <orderEntry type="library" name="Maven: org.intellimate.izou:izou:1.5.21" level="project" />
     <orderEntry type="library" name="Maven: org.apache.logging.log4j:log4j-api:2.1" level="project" />
     <orderEntry type="library" name="Maven: org.apache.logging.log4j:log4j-core:2.1" level="project" />
     <orderEntry type="library" name="Maven: org.apache.logging.log4j:log4j-slf4j-impl:2.1" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.7" level="project" />
-    <orderEntry type="library" name="Maven: org.intellimate.izou:pf4j:1.4" level="project" />
+    <orderEntry type="library" name="Maven: org.intellimate.izou:pf4j:1.5" level="project" />
     <orderEntry type="library" name="Maven: com.google.guava:guava:18.0" level="project" />
     <orderEntry type="library" name="Maven: commons-lang:commons-lang:2.6" level="project" />
     <orderEntry type="library" name="Maven: dnsjava:dnsjava:2.1.6" level="project" />

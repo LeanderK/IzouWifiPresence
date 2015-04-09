@@ -5,7 +5,7 @@ import org.intellimate.izou.resource.ResourceModel;
 import org.intellimate.izou.sdk.Context;
 import org.intellimate.izou.sdk.contentgenerator.ContentGenerator;
 import org.intellimate.izou.sdk.contentgenerator.EventListener;
-import org.intellimate.izou.sdk.events.Event;
+import org.intellimate.izou.sdk.events.CommonEvents;
 import org.intellimate.izou.sdk.resource.Resource;
 
 import java.util.Arrays;
@@ -29,12 +29,7 @@ public class WifiPresenceContentGenerator extends ContentGenerator {
 
     @Override
     public List<? extends EventListener> getTriggeredEvents() {
-        Optional<EventListener> event_response = EventListener.createEventListener(
-                Event.RESPONSE,
-                "Signals that an event expects an response from other addons",
-                "event_response",
-                this);
-        return optionalToList(event_response);
+        return optionalToList(CommonEvents.get(this).getType().responseListener());
     }
 
     @Override
@@ -44,6 +39,8 @@ public class WifiPresenceContentGenerator extends ContentGenerator {
                 .flatMap(opt -> optionalToList(opt).stream())
                 .collect(Collectors.toList());
     }
+
+
 
     @Override
     public List<? extends Resource> triggered(List<? extends ResourceModel> list, Optional<EventModel> optional) {

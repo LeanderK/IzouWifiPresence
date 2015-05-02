@@ -2,7 +2,7 @@ package leanderk.izou.wifipresence;
 
 import org.intellimate.izou.sdk.Context;
 import org.intellimate.izou.sdk.activator.Activator;
-import org.intellimate.izou.sdk.events.Event;
+import org.intellimate.izou.sdk.events.CommonEvents;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -30,7 +30,9 @@ public class WifiScanner extends Activator {
     private Queue<TrackingObject> trackingObjectsToAdd = new ArrayDeque<>();
     private List<String> interestedHostNames = Collections.synchronizedList(new ArrayList<>());
     private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private ScheduledFuture<?> reachabilityFuture;
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private ScheduledFuture<?> checkHostsFuture;
 
     public WifiScanner(Context context) {
@@ -80,7 +82,7 @@ public class WifiScanner extends Activator {
                 .anyMatch(alreadyTracking -> alreadyTracking.getHostname().equals(trackingObject.getHostname()))) {
             error("tracking " + trackingObject.toString());
             if (trackingObjects.isEmpty()) {
-                boolean fire = fire(Event.NOTIFICATION, AddOn.EVENT_ENTERED);
+                boolean fire = fire(CommonEvents.Type.RESPONSE_TYPE, CommonEvents.Presence.GENERAL_DESCRIPTOR);
                 if (!fire)
                     error("Unable to fire Event");
             }
@@ -196,7 +198,7 @@ public class WifiScanner extends Activator {
      */
     public void removedFromTrackingObjectsList() {
         if (trackingObjects.isEmpty()) {
-            boolean fire = fire(Event.NOTIFICATION, AddOn.EVENT_LEFT);
+            boolean fire = fire(CommonEvents.Type.RESPONSE_TYPE, CommonEvents.Presence.GENERAL_LEAVING_DESCRIPTOR);
             if (!fire)
                 error("unable to create Event");
         }

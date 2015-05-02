@@ -29,7 +29,7 @@ public class WifiPresenceContentGenerator extends ContentGenerator {
 
     @Override
     public List<? extends EventListener> getTriggeredEvents() {
-        return optionalToList(CommonEvents.get(this).getType().responseListener());
+        return optionalToList(CommonEvents.Type.responseListener(this));
     }
 
     @Override

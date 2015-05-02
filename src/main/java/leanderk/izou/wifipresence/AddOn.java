@@ -14,8 +14,6 @@ import ro.fortsoft.pf4j.Extension;
 @Extension
 public class AddOn extends org.intellimate.izou.sdk.addon.AddOn{
     public static final String ID = AddOn.class.getCanonicalName();
-    public static final String EVENT_ENTERED = "izou.presence.general";
-    public static final String EVENT_LEFT = "izou.presence.general.leaving";
     private WifiScanner wifiScanner;
 
     /**

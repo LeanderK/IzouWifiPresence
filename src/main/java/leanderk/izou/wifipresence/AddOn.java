@@ -59,7 +59,7 @@ public class AddOn extends org.intellimate.izou.sdk.addon.AddOn{
     @Override
     public EventsControllerModel[] registerEventController() {
         EventsControllerModel[] eventsControllers = new EventsControllerModel[1];
-        eventsControllers[0] = new WifiScanner(getContext());
+        eventsControllers[0] = wifiScanner;
         return eventsControllers;
     }
 

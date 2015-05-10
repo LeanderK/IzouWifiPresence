@@ -13,7 +13,6 @@
     <properties>
         <plugin.id>leanderk.izou.wifipresence</plugin.id>
         <plugin.class>leanderk.izou.wifipresence.ZipFileManager</plugin.class>
-        <plugin.version>{project.version}</plugin.version>
         <plugin.provider>Leander Kurscheidt</plugin.provider>
         <plugin.dependencies />
         <repo.name>IzouWifiPresence</repo.name>
@@ -183,7 +182,7 @@
                         <manifestEntries>
                             <Plugin-Id>${plugin.id}</Plugin-Id>
                             <Plugin-Class>${plugin.class}</Plugin-Class>
-                            <Plugin-Version>${plugin.version}</Plugin-Version>
+                            <Plugin-Version>${project.version}</Plugin-Version>
                             <Plugin-Provider>${plugin.provider}</Plugin-Provider>
                             <Plugin-Dependencies>${plugin.dependencies}</Plugin-Dependencies>
                         </manifestEntries>

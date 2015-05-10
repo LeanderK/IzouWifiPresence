@@ -1,12 +1,10 @@
 package leanderk.izou.wifipresence;
 
 import org.intellimate.izou.sdk.Context;
-import org.intellimate.izou.sdk.activator.Activator;
-import org.intellimate.izou.sdk.events.CommonEvents;
+import org.intellimate.izou.sdk.frameworks.presence.provider.PresenceIndicatorLevel;
+import org.intellimate.izou.sdk.frameworks.presence.provider.template.PresenceConstant;
 
-import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -21,7 +19,7 @@ import java.util.concurrent.TimeUnit;
  * @author LeanderK
  * @version 1.0
  */
-public class WifiScanner extends Activator {
+public class WifiScanner extends PresenceConstant {
     public static final String ID = WifiScanner.class.getCanonicalName();
     private static final String PROPERTIES_ID = "hostname_";
     private List<DiscoverService> discoverServiceList = Collections.synchronizedList(new ArrayList<>());
@@ -36,11 +34,7 @@ public class WifiScanner extends Activator {
     private ScheduledFuture<?> checkHostsFuture;
 
     public WifiScanner(Context context) {
-        super(context, ID);
-    }
-
-    @Override
-    public void activatorStarts() {
+        super(context, ID, false, PresenceIndicatorLevel.WEAK, true);
         getContext().getPropertiesAssistant().getProperties().stringPropertyNames().stream()
                 .filter(key -> key.matches(PROPERTIES_ID + "\\d+"))
                 .map(getContext().getPropertiesAssistant()::getProperties)
@@ -48,7 +42,6 @@ public class WifiScanner extends Activator {
         JmDNSDiscoverService jmDNSDiscoverService = new JmDNSDiscoverService(this, getContext());
         discoverServiceList.add(jmDNSDiscoverService);
         scanWifi();
-        stop();
     }
 
     /**
@@ -81,11 +74,7 @@ public class WifiScanner extends Activator {
         if (!trackingObjects.stream()
                 .anyMatch(alreadyTracking -> alreadyTracking.getHostname().equals(trackingObject.getHostname()))) {
             error("tracking " + trackingObject.toString());
-            if (trackingObjects.isEmpty()) {
-                boolean fire = fire(CommonEvents.Type.RESPONSE_TYPE, CommonEvents.Presence.GENERAL_DESCRIPTOR);
-                if (!fire)
-                    error("Unable to fire Event");
-            }
+            setPresence(true);
             trackingObjects.add(trackingObject);
         } else {
             error("already tracking " + trackingObject.toString());
@@ -198,18 +187,8 @@ public class WifiScanner extends Activator {
      */
     public void removedFromTrackingObjectsList() {
         if (trackingObjects.isEmpty()) {
-            boolean fire = fire(CommonEvents.Type.RESPONSE_TYPE, CommonEvents.Presence.GENERAL_LEAVING_DESCRIPTOR);
-            if (!fire)
-                error("unable to create Event");
+            setPresence(false);
         }
-    }
-
-    /**
-     * returns whether any TrackingObjects we are interested in are currently present
-     * @return true if present, false if not.
-     */
-    public boolean anyPresent() {
-        return !trackingObjects.isEmpty();
     }
 
     /**
@@ -227,28 +206,5 @@ public class WifiScanner extends Activator {
                 .anyMatch(inet -> inet.equals(inetAddress));
 
         return reachable || unreachable;
-    }
-
-    public void develop() {
-        InetAddress[] addresses = new InetAddress[0];
-        try {
-            addresses = InetAddress.getAllByName("www.google.de");
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
-        for (InetAddress address : addresses) {
-            try {
-                if (address.isReachable(10000))
-                {
-                    System.out.println("Connected "+ address);
-                }
-                else
-                {
-                    System.out.println("Failed "+address);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
     }
 }

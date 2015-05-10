@@ -38,9 +38,7 @@ public class AddOn extends org.intellimate.izou.sdk.addon.AddOn{
      */
     @Override
     public Activator[] registerActivator() {
-        Activator[] activators = new Activator[1];
-        activators[0] = wifiScanner;
-        return activators;
+        return null;
     }
 
     /**
@@ -50,9 +48,7 @@ public class AddOn extends org.intellimate.izou.sdk.addon.AddOn{
      */
     @Override
     public ContentGenerator[] registerContentGenerator() {
-        ContentGenerator[] contentGenerators = new ContentGenerator[1];
-        contentGenerators[0] = new WifiPresenceContentGenerator(getContext(), wifiScanner);
-        return contentGenerators;
+        return null;
     }
 
     /**
@@ -63,7 +59,7 @@ public class AddOn extends org.intellimate.izou.sdk.addon.AddOn{
     @Override
     public EventsControllerModel[] registerEventController() {
         EventsControllerModel[] eventsControllers = new EventsControllerModel[1];
-        eventsControllers[0] = new WifiPresenceEventsController(wifiScanner ,getContext());
+        eventsControllers[0] = new WifiScanner(getContext());
         return eventsControllers;
     }
 

@@ -7,7 +7,7 @@
     <groupId>leanderk.izou.wifipresence</groupId>
     <artifactId>wifipresence</artifactId>
     <packaging>jar</packaging>
-    <version>1.6</version>
+    <version>1.7</version>
     <name>Wifi-Presence</name>
 
     <properties>
@@ -250,8 +250,8 @@
                 <version>1.1.0</version>
                 <configuration>
                     <repositoryId>${repo.owner}/${repo.name}</repositoryId>
-                    <releaseName>${plugin.version}</releaseName>
-                    <tag>${plugin.version}</tag>
+                    <releaseName>${project.version}</releaseName>
+                    <tag>${project.version}</tag>
                     <artifact>${project.build.directory}/${artifactId}-${version}.zip</artifact>
                 </configuration>
                 <executions>

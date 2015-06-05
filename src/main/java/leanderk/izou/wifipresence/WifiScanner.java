@@ -34,10 +34,10 @@ public class WifiScanner extends PresenceConstant {
     private ScheduledFuture<?> checkHostsFuture;
 
     public WifiScanner(Context context) {
-        super(context, ID, false, PresenceIndicatorLevel.WEAK, true);
+        super(context, ID, false, PresenceIndicatorLevel.WEAK);
         getContext().getPropertiesAssistant().getProperties().stringPropertyNames().stream()
                 .filter(key -> key.matches(PROPERTIES_ID + "\\d+"))
-                .map(getContext().getPropertiesAssistant()::getProperties)
+                .map(getContext().getPropertiesAssistant()::getProperty)
                 .forEach(interestedHostNames::add);
         JmDNSDiscoverService jmDNSDiscoverService = new JmDNSDiscoverService(this, getContext());
         discoverServiceList.add(jmDNSDiscoverService);

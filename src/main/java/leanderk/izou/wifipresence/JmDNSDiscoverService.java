@@ -39,6 +39,7 @@ public class JmDNSDiscoverService extends DiscoverService {
             return;
         }
         initJmDNS();
+        jmDNS.getServiceInfo("", "", true);
     }
 
     private void initJmDNS() {
@@ -149,7 +150,7 @@ public class JmDNSDiscoverService extends DiscoverService {
                                     inet -> trackingObjectRemoved(inetAddress),
                                     inetAddress,
                                     first.get(),
-                                    LocalTime.of(1, 0)));
+                                    LocalTime.of(0, 30)));
                             return;
                         }
                     } catch (IOException e) {

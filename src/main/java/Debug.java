@@ -10,6 +10,7 @@ public class Debug {
     public static void main(String[] args) {
         LinkedList<AddOnModel> addOns = new LinkedList<>();
         addOns.add(new leanderk.izou.wifipresence.AddOn());
+        System.setProperty("noSecurity","true");
         Main main = new Main(addOns, true);
     }
 }

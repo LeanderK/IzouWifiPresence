@@ -149,7 +149,7 @@ public class WifiScanner extends PresenceConstant {
                     error(trackingObject.toString() + " has a different host");
                     iterator.remove();
                     trackingObject.runRemovedCallback();
-                    removedFromTrackingObjectsList();
+                    declaredUnreachable();
                 } else {
 //                    context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress()
 //                            + " has the same host");
@@ -162,11 +162,11 @@ public class WifiScanner extends PresenceConstant {
                 TrackingObject trackingObject = iterator.next();
                 if (time == null) time = LocalTime.now();
 
-                if (trackingObject.getLimit().isAfter(time)) {
+                if (trackingObject.getLimit().isBefore(time)) {
                     error("unreachable" + trackingObject.toString() + " Time-To-Live timed out");
                     iterator.remove();
                     trackingObject.runRemovedCallback();
-                    removedFromTrackingObjectsList();
+                    declaredUnreachable();
                     continue;
                 }
 
@@ -175,7 +175,7 @@ public class WifiScanner extends PresenceConstant {
                 if (trackingObject.hostChanged()) {
                     error("unreachable " + trackingObject.toString() + " has a different host");
                     iterator.remove();
-                    removedFromTrackingObjectsList();
+                    declaredUnreachable();
                 }
             }
         } catch (Exception e) {
@@ -186,7 +186,7 @@ public class WifiScanner extends PresenceConstant {
     /**
      * fires an event if no trackingobjects are left
      */
-    public void removedFromTrackingObjectsList() {
+    public void declaredUnreachable() {
         if (unreachableTrackingObjects.isEmpty() && trackingObjects.isEmpty()) {
             setPresence(false);
         }

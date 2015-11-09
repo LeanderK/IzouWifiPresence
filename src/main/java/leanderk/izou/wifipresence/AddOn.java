@@ -28,7 +28,8 @@ public class AddOn extends org.intellimate.izou.sdk.addon.AddOn{
      */
     @Override
     public void prepare() {
-        wifiScanner = new WifiScanner(getContext());
+        if(!Boolean.getBoolean("noWiScan"))
+            wifiScanner = new WifiScanner(getContext());
     }
 
     /**
@@ -58,9 +59,12 @@ public class AddOn extends org.intellimate.izou.sdk.addon.AddOn{
      */
     @Override
     public EventsControllerModel[] registerEventController() {
-        EventsControllerModel[] eventsControllers = new EventsControllerModel[1];
-        eventsControllers[0] = wifiScanner;
-        return eventsControllers;
+        if (wifiScanner != null) {
+            EventsControllerModel[] eventsControllers = new EventsControllerModel[1];
+            eventsControllers[0] = wifiScanner;
+            return eventsControllers;
+        }
+        return null;
     }
 
     /**

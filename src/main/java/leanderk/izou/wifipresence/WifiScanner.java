@@ -72,12 +72,14 @@ public class WifiScanner extends PresenceConstant {
      */
     public void addToTrackingObjects(TrackingObject trackingObject) {
         if (!trackingObjects.stream()
-                .anyMatch(alreadyTracking -> alreadyTracking.getHostname().equals(trackingObject.getHostname()))) {
-            error("tracking " + trackingObject.toString());
+                .anyMatch(alreadyTracking -> alreadyTracking.getHostname().equals(trackingObject.getHostname())) ||
+            !unreachableTrackingObjects.stream()
+                        .anyMatch(alreadyTracking -> alreadyTracking.getHostname().equals(trackingObject.getHostname()))) {
+            debug("tracking " + trackingObject.toString());
             setPresence(true);
             trackingObjects.add(trackingObject);
         } else {
-            error("already tracking " + trackingObject.toString());
+            debug("already tracking " + trackingObject.toString());
         }
     }
 
@@ -105,7 +107,7 @@ public class WifiScanner extends PresenceConstant {
 
                 //context.logger.getLogger().error("checking reachability for " + trackingObject.getInetAddress().getHostAddress());
                 if (!trackingObject.isReachable()) {
-                    error(trackingObject.toString() + " is not reachable");
+                    debug(trackingObject.toString() + " is not reachable");
                     iterator.remove();
                     trackingObject.updateLimit();
                     unreachableTrackingObjects.add(trackingObject);
@@ -119,10 +121,10 @@ public class WifiScanner extends PresenceConstant {
             while (iterator.hasNext()) {
                 TrackingObject trackingObject = iterator.next();
 
-                error("checking reachability for unreached "
-                        + trackingObject.toString());
+                //debug("checking reachability for unreached "
+                //        + trackingObject.toString());
                 if (!trackingObject.isReachable()) {
-                    error(trackingObject.toString() + " is still  not reachable");
+                //    error(trackingObject.toString() + " is still  not reachable");
                 } else {
                     addToTrackingObjects(trackingObject);
                     iterator.remove();
@@ -146,7 +148,7 @@ public class WifiScanner extends PresenceConstant {
 
                 //context.logger.getLogger().debug("checking host for " + trackingObject.getInetAddress().getHostAddress());
                 if (trackingObject.hostChanged()) {
-                    error(trackingObject.toString() + " has a different host");
+                    debug(trackingObject.toString() + " has a different host");
                     iterator.remove();
                     trackingObject.runRemovedCallback();
                     declaredUnreachable();
@@ -163,23 +165,23 @@ public class WifiScanner extends PresenceConstant {
                 if (time == null) time = LocalTime.now();
 
                 if (trackingObject.getLimit().isBefore(time)) {
-                    error("unreachable" + trackingObject.toString() + " Time-To-Live timed out");
+                    debug("unreachable" + trackingObject.toString() + " Time-To-Live timed out");
                     iterator.remove();
                     trackingObject.runRemovedCallback();
                     declaredUnreachable();
                     continue;
                 }
 
-                error("checking host for unreachable"
-                        + trackingObject.getInetAddress().getHostAddress());
+                //debug("checking host for unreachable"
+                //        + trackingObject.getInetAddress().getHostAddress());
                 if (trackingObject.hostChanged()) {
-                    error("unreachable " + trackingObject.toString() + " has a different host");
+                    debug("unreachable " + trackingObject.toString() + " has a different host");
                     iterator.remove();
                     declaredUnreachable();
                 }
             }
         } catch (Exception e) {
-            error("An error occured", e);
+            debug("An error occured", e);
         }
     }
 

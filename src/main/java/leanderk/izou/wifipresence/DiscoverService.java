@@ -10,7 +10,7 @@ import java.util.List;
  * @author LeanderK
  * @version 1.0
  */
-public class DiscoverService {
+public abstract class DiscoverService implements Resettable {
     private WifiScanner wifiScanner;
     public DiscoverService(WifiScanner wifiScanner) {
         this.wifiScanner = wifiScanner;

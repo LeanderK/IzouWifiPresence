@@ -2,7 +2,8 @@ package leanderk.izou.wifipresence;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
+import java.time.temporal.TemporalAmount;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
@@ -17,16 +18,8 @@ public class TrackingObject {
     private Consumer<InetAddress> removed;
     private InetAddress inetAddress;
     private String hostname;
-    private LocalTime ttl;
-    private LocalTime limit;
-    private int unreachableCount = 0;
-    private int unreachableLimit = 5;
-    private int hostChangedCount = 0;
-    private int hostChangedLimit = 4;
-
-    public TrackingObject(BooleanSupplier hostChanged, Consumer<InetAddress> removed, InetAddress inetAddress, String hostname) {
-        this(hostChanged, removed, inetAddress, hostname, null);
-    }
+    private TemporalAmount ttl;
+    private LocalDateTime lastReached = LocalDateTime.now();
 
     /**
      * creates a new TrackingObject
@@ -40,7 +33,7 @@ public class TrackingObject {
                           Consumer<InetAddress> removed,
                           InetAddress inetAddress,
                           String hostname,
-                          LocalTime ttl) {
+                          TemporalAmount ttl) {
         this.hostChanged = hostChanged;
         this.inetAddress = inetAddress;
         this.removed = removed;
@@ -53,14 +46,7 @@ public class TrackingObject {
      * @return true if it still belongs to the same host, false if not
      */
     public boolean hostChanged() {
-        if (hostChanged.getAsBoolean()) {
-            hostChangedCount++;
-            return hostChangedCount >= hostChangedLimit;
-        } else {
-            if (hostChangedCount != 0)
-                hostChangedCount = 0;
-            return false;
-        }
+        return hostChanged.getAsBoolean();
     }
 
     /**
@@ -88,14 +74,11 @@ public class TrackingObject {
         try {
            reachable =  inetAddress.isReachable(400);
         } catch (IOException ignored) { }
-        if (reachable) {
-            if (unreachableCount != 0)
-                unreachableCount = 0;
-            return true;
-        } else {
-            unreachableCount++;
-            return unreachableCount <= unreachableLimit;
-        }
+        return reachable;
+    }
+
+    public boolean isOverLimit(LocalDateTime now) {
+        return lastReached.plus(ttl).isBefore(now);
     }
 
     /**
@@ -105,18 +88,8 @@ public class TrackingObject {
         removed.accept(inetAddress);
     }
 
-    /**
-     * when we should end tracking the IP
-     * @return LocalTime
-     */
-    public LocalTime getLimit() {
-        return limit;
-    }
-
-    public void updateLimit() {
-        limit = LocalTime.now();
-        if (ttl != null)
-            limit = limit.plusHours(ttl.getHour()).plusMinutes(ttl.getMinute());
+    public void setLastReached(LocalDateTime lastReached) {
+        this.lastReached = lastReached;
     }
 
     @Override
@@ -125,5 +98,21 @@ public class TrackingObject {
                 "hostname='" + hostname + '\'' +
                 ", inetAddress=" + inetAddress +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof TrackingObject)) return false;
+
+        TrackingObject that = (TrackingObject) o;
+
+        return !(hostname != null ? !hostname.equals(that.hostname) : that.hostname != null);
+
+    }
+
+    @Override
+    public int hashCode() {
+        return hostname != null ? hostname.hashCode() : 0;
     }
 }

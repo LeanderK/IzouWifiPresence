@@ -5,12 +5,14 @@ import org.intellimate.izou.sdk.frameworks.presence.provider.PresenceIndicatorLe
 import org.intellimate.izou.sdk.frameworks.presence.provider.template.PresenceConstant;
 
 import java.net.InetAddress;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 /**
  * The WifiScanner holds the DiscoverServices, which discover devices, and tracks them.
@@ -23,8 +25,8 @@ public class WifiScanner extends PresenceConstant {
     public static final String ID = WifiScanner.class.getCanonicalName();
     private static final String PROPERTIES_ID = "hostname_";
     private List<DiscoverService> discoverServiceList = Collections.synchronizedList(new ArrayList<>());
-    private List<TrackingObject> trackingObjects = new ArrayList<>();
-    private List<TrackingObject> unreachableTrackingObjects = new ArrayList<>();
+    private Set<TrackingObject> trackingObjects = new HashSet<>();
+    private ReentrantReadWriteLock lock =  new ReentrantReadWriteLock();
     private Queue<TrackingObject> trackingObjectsToAdd = new ArrayDeque<>();
     private List<String> interestedHostNames = Collections.synchronizedList(new ArrayList<>());
     private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
@@ -49,7 +51,7 @@ public class WifiScanner extends PresenceConstant {
      */
     public void scanWifi() {
         reachabilityFuture =
-                scheduledExecutorService.scheduleAtFixedRate((Runnable) this::checkReachability, 0, 4, TimeUnit.SECONDS);
+                scheduledExecutorService.scheduleAtFixedRate((Runnable) this::checkReachability, 0, 1, TimeUnit.SECONDS);
         checkHostsFuture =
                 scheduledExecutorService.scheduleAtFixedRate((Runnable) this::checkHostAndDoMaintenance, 0, 30, TimeUnit.SECONDS);
     }
@@ -62,7 +64,7 @@ public class WifiScanner extends PresenceConstant {
      * @param trackingObject the new InetAddress.
      */
     public void newInetAddressDiscovered(TrackingObject trackingObject) {
-        debug("New request to track " + trackingObject.toString());
+        //debug("New request to track " + trackingObject.toString());
         trackingObjectsToAdd.add(trackingObject);
     }
 
@@ -71,15 +73,17 @@ public class WifiScanner extends PresenceConstant {
      * @param trackingObject the new TrackingObject
      */
     public void addToTrackingObjects(TrackingObject trackingObject) {
-        if (!trackingObjects.stream()
-                .anyMatch(alreadyTracking -> alreadyTracking.getHostname().equals(trackingObject.getHostname())) ||
-            !unreachableTrackingObjects.stream()
-                        .anyMatch(alreadyTracking -> alreadyTracking.getHostname().equals(trackingObject.getHostname()))) {
-            debug("tracking " + trackingObject.toString());
-            setPresence(true);
-            trackingObjects.add(trackingObject);
-        } else {
-            debug("already tracking " + trackingObject.toString());
+        lock.readLock().lock();
+        try {
+            if (!trackingObjects.add(trackingObject)) {
+                //debug("tracking " + trackingObject.toString());
+                debug("now present");
+                setPresence(true);
+            } else {
+                //debug("already tracking " + trackingObject.toString());
+            }
+        } finally {
+            lock.readLock().unlock();
         }
     }
 
@@ -95,40 +99,16 @@ public class WifiScanner extends PresenceConstant {
      * pings every tracking-Object
      */
     public void checkReachability() {
-        while (!trackingObjectsToAdd.isEmpty()) {
-            TrackingObject trackingObject = trackingObjectsToAdd.poll();
-            addToTrackingObjects(trackingObject);
-        }
+        trackingObjectsToAdd.forEach(this::addToTrackingObjects);
         try {
-            Iterator<TrackingObject> iterator = trackingObjects.iterator();
-
-            while (iterator.hasNext()) {
-                TrackingObject trackingObject = iterator.next();
-
-                //context.logger.getLogger().error("checking reachability for " + trackingObject.getInetAddress().getHostAddress());
-                if (!trackingObject.isReachable()) {
-                    debug(trackingObject.toString() + " is not reachable");
-                    iterator.remove();
-                    trackingObject.updateLimit();
-                    unreachableTrackingObjects.add(trackingObject);
-                } else {
-//                    context.logger.getLogger().debug(trackingObject.getInetAddress().getHostAddress() + " is reachable");
-                }
-            }
-
-            iterator = unreachableTrackingObjects.iterator();
-
-            while (iterator.hasNext()) {
-                TrackingObject trackingObject = iterator.next();
-
-                //debug("checking reachability for unreached "
-                //        + trackingObject.toString());
-                if (!trackingObject.isReachable()) {
-                //    error(trackingObject.toString() + " is still  not reachable");
-                } else {
-                    addToTrackingObjects(trackingObject);
-                    iterator.remove();
-                }
+            lock.readLock().lock();
+            LocalDateTime now = LocalDateTime.now();
+            try {
+                trackingObjects.stream()
+                        .filter(TrackingObject::isReachable)
+                        .forEach(trackingObject -> trackingObject.setLastReached(now));
+            } finally {
+                lock.readLock().unlock();
             }
         } catch (Exception e) {
             error("An Error occured", e);
@@ -140,57 +120,33 @@ public class WifiScanner extends PresenceConstant {
      */
     public void checkHostAndDoMaintenance() {
         try {
-
-            Iterator<TrackingObject> iterator = trackingObjects.iterator();
-
-            while (iterator.hasNext()) {
-                TrackingObject trackingObject = iterator.next();
-
-                //context.logger.getLogger().debug("checking host for " + trackingObject.getInetAddress().getHostAddress());
-                if (trackingObject.hostChanged()) {
-                    debug(trackingObject.toString() + " has a different host");
-                    iterator.remove();
-                    trackingObject.runRemovedCallback();
-                    declaredUnreachable();
-                } else {
-//                    context.logger.getLogger().error(trackingObject.getInetAddress().getHostAddress()
-//                            + " has the same host");
+            LocalDateTime now = LocalDateTime.now();
+            List<TrackingObject> toRemove = trackingObjects.stream()
+                    .filter(trackingObject -> trackingObject.hostChanged() || trackingObject.isOverLimit(now))
+                    .collect(Collectors.toList());
+            if (!toRemove.isEmpty()) {
+                lock.writeLock().lock();
+                try {
+                    trackingObjects.removeAll(toRemove);
+                } finally {
+                    lock.writeLock().unlock();
                 }
-            }
-
-            iterator = unreachableTrackingObjects.iterator();
-            LocalTime time = null;
-            while (iterator.hasNext()) {
-                TrackingObject trackingObject = iterator.next();
-                if (time == null) time = LocalTime.now();
-
-                if (trackingObject.getLimit().isBefore(time)) {
-                    debug("unreachable" + trackingObject.toString() + " Time-To-Live timed out");
-                    iterator.remove();
-                    trackingObject.runRemovedCallback();
-                    declaredUnreachable();
-                    continue;
-                }
-
-                //debug("checking host for unreachable"
-                //        + trackingObject.getInetAddress().getHostAddress());
-                if (trackingObject.hostChanged()) {
-                    debug("unreachable " + trackingObject.toString() + " has a different host");
-                    iterator.remove();
-                    declaredUnreachable();
-                }
+                toRemove.forEach(TrackingObject::runRemovedCallback);
+                lostPresence();
             }
         } catch (Exception e) {
-            debug("An error occured", e);
+            error("An error occured", e);
         }
     }
 
     /**
      * fires an event if no trackingobjects are left
      */
-    public void declaredUnreachable() {
-        if (unreachableTrackingObjects.isEmpty() && trackingObjects.isEmpty()) {
+    public void lostPresence() {
+        if (trackingObjects.isEmpty()) {
+            debug("declaring unreachable");
             setPresence(false);
+            discoverServiceList.forEach(Resettable::reset);
         }
     }
 
@@ -200,14 +156,13 @@ public class WifiScanner extends PresenceConstant {
      * @return true if already tracking, false if not
      */
     public boolean isAlreadyTracking(InetAddress inetAddress) {
-        boolean reachable = trackingObjects.stream()
-                .map(TrackingObject::getInetAddress)
-                .anyMatch(inet -> inet.equals(inetAddress));
-
-        boolean unreachable = unreachableTrackingObjects.stream()
-                .map(TrackingObject::getInetAddress)
-                .anyMatch(inet -> inet.equals(inetAddress));
-
-        return reachable || unreachable;
+        lock.readLock().lock();
+        try {
+            return trackingObjects.stream()
+                    .map(TrackingObject::getInetAddress)
+                    .anyMatch(inet -> inet.equals(inetAddress));
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 }

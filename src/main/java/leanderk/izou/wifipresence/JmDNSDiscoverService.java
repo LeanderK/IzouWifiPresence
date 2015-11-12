@@ -6,7 +6,8 @@ import javax.jmdns.*;
 import javax.jmdns.impl.DNSIncoming;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.time.LocalTime;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -150,7 +151,7 @@ public class JmDNSDiscoverService extends DiscoverService {
                                     inet -> trackingObjectRemoved(inetAddress),
                                     inetAddress,
                                     first.get(),
-                                    LocalTime.of(0, 30)));
+                                    Duration.of(30, ChronoUnit.MINUTES)));
                             return;
                         }
                     } catch (IOException e) {
@@ -205,6 +206,11 @@ public class JmDNSDiscoverService extends DiscoverService {
             //jmDNS1.renewServiceCollector(new DNSRecordWithType(type));
             jmDNS.addServiceListener(type, createNewDeviceListener(type));
         }*/
+        restartJmDNS();
+    }
+
+    @Override
+    public void reset() {
         restartJmDNS();
     }
 

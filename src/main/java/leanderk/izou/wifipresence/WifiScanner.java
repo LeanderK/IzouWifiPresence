@@ -100,6 +100,7 @@ public class WifiScanner extends PresenceConstant {
      */
     public void checkReachability() {
         trackingObjectsToAdd.forEach(this::addToTrackingObjects);
+        trackingObjects.clear();
         try {
             lock.readLock().lock();
             LocalDateTime now = LocalDateTime.now();

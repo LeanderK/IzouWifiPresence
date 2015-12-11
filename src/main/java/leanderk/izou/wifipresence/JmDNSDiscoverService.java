@@ -178,14 +178,15 @@ public class JmDNSDiscoverService extends DiscoverService {
      * @return true if found, false if not
      */
     private boolean checkHost(InetAddress address, String type, String name) {
-        ServiceInfo serviceInfo = jmDNS.getServiceInfo(type, name);
-        if (serviceInfo == null) return false;
+        /*ServiceInfo serviceInfo = jmDNS.getServiceInfo(type, name);
+        if (serviceInfo == null) return true;
         for (InetAddress inetAddress : serviceInfo.getInetAddresses()) {
             if (inetAddress.equals(address)) {
                 return true;
             }
         }
-        return false;
+        return false;*/
+        return true;
     }
 
     private void trackingObjectRemoved (InetAddress inetAddress) {

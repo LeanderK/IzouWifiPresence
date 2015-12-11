@@ -17,7 +17,7 @@ public class TrackingObject {
     private BooleanSupplier hostChanged;
     private Consumer<InetAddress> removed;
     private InetAddress inetAddress;
-    private String hostname;
+    private final String hostname;
     private TemporalAmount ttl;
     private LocalDateTime lastReached = LocalDateTime.now();
 
@@ -88,8 +88,9 @@ public class TrackingObject {
         removed.accept(inetAddress);
     }
 
-    public void setLastReached(LocalDateTime lastReached) {
-        this.lastReached = lastReached;
+    public void updateLastReached(LocalDateTime lastReached) {
+        if (this.lastReached.isBefore(lastReached))
+            this.lastReached = lastReached;
     }
 
     @Override
@@ -107,12 +108,12 @@ public class TrackingObject {
 
         TrackingObject that = (TrackingObject) o;
 
-        return !(hostname != null ? !hostname.equals(that.hostname) : that.hostname != null);
+        return hostname.equals(that.hostname);
 
     }
 
     @Override
     public int hashCode() {
-        return hostname != null ? hostname.hashCode() : 0;
+        return hostname.hashCode();
     }
 }

@@ -75,11 +75,14 @@ public class WifiScanner extends PresenceConstant {
     public void addToTrackingObjects(TrackingObject trackingObject) {
         lock.readLock().lock();
         try {
-            if (!trackingObjects.add(trackingObject)) {
+            if (trackingObjects.add(trackingObject)) {
                 //debug("tracking " + trackingObject.toString());
                 debug("now present");
                 setPresence(true);
             } else {
+                trackingObjects.stream()
+                        .filter(existing -> existing.equals(trackingObject))
+                        .forEach(existing -> existing.updateLastReached(LocalDateTime.now()));
                 //debug("already tracking " + trackingObject.toString());
             }
         } finally {
@@ -107,7 +110,7 @@ public class WifiScanner extends PresenceConstant {
             try {
                 trackingObjects.stream()
                         .filter(TrackingObject::isReachable)
-                        .forEach(trackingObject -> trackingObject.setLastReached(now));
+                        .forEach(trackingObject -> trackingObject.updateLastReached(now));
             } finally {
                 lock.readLock().unlock();
             }
@@ -123,7 +126,11 @@ public class WifiScanner extends PresenceConstant {
         try {
             LocalDateTime now = LocalDateTime.now();
             List<TrackingObject> toRemove = trackingObjects.stream()
-                    .filter(trackingObject -> trackingObject.hostChanged() || trackingObject.isOverLimit(now))
+                    .filter(trackingObject -> {
+                        boolean changed = trackingObject.hostChanged();
+                        boolean limit = trackingObject.isOverLimit(now);
+                        return changed || limit;
+                    })
                     .collect(Collectors.toList());
             if (!toRemove.isEmpty()) {
                 lock.writeLock().lock();

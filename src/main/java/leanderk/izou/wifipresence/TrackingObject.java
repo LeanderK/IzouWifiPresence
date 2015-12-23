@@ -74,6 +74,7 @@ public class TrackingObject {
         try {
            reachable =  inetAddress.isReachable(400);
         } catch (IOException ignored) { }
+
         return reachable;
     }
 

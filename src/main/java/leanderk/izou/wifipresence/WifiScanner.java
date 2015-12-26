@@ -1,5 +1,6 @@
 package leanderk.izou.wifipresence;
 
+import org.intellimate.izou.events.EventModel;
 import org.intellimate.izou.sdk.Context;
 import org.intellimate.izou.sdk.frameworks.presence.provider.PresenceIndicatorLevel;
 import org.intellimate.izou.sdk.frameworks.presence.provider.template.PresenceConstant;
@@ -190,5 +191,19 @@ public class WifiScanner extends PresenceConstant implements FileSubscriber {
                 .filter(key -> key.matches(PROPERTIES_ID + "\\d+"))
                 .map(getContext().getPropertiesAssistant()::getProperty)
                 .forEach(interestedHostNames::add);
+    }
+
+    /**
+     * Controls whether the fired Event should be dispatched to all the listeners. This method should execute quickly.
+     * The user can decide whether event should be dispatched only when present or anytime
+     *
+     * @param eventModel the Event
+     * @return true if it should dispatch, false if not
+     */
+    @Override
+    public boolean controlEvents(EventModel eventModel) {
+        Properties properties = getContext().getPropertiesAssistant().getProperties();
+        boolean wifiPresenceBlock = Boolean.parseBoolean(properties.getProperty("wifiPresenceBlock"));
+        return !wifiPresenceBlock || super.controlEvents(eventModel);
     }
 }

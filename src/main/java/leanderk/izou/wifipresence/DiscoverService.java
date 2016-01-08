@@ -12,6 +12,11 @@ import java.util.List;
  */
 public abstract class DiscoverService implements Resettable {
     private WifiScanner wifiScanner;
+
+    /**
+     * Creates a new DiscoverService object
+     * @param wifiScanner the wifiscanner to use to discover new devices
+     */
     public DiscoverService(WifiScanner wifiScanner) {
         this.wifiScanner = wifiScanner;
     }

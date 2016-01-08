@@ -75,12 +75,6 @@ public class TrackingObject {
            reachable =  inetAddress.isReachable(400);
         } catch (IOException ignored) { }
 
-        if (reachable) {
-            System.out.println(inetAddress + " is reachable");
-        } else {
-            System.out.println(inetAddress + " is not reachable");
-        }
-
         return reachable;
     }
 

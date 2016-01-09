@@ -8,10 +8,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -144,6 +141,13 @@ public class JmDNSDiscoverService extends DiscoverService {
                 for (int i = 0; i < inetAddresses.length; i++) {
                     InetAddress inetAddress = inetAddresses[i];
                     try {
+                        int allowedDisconnectTime = 1800;
+                        try {
+                            Properties properties = context.getPropertiesAssistant().getProperties();
+                            allowedDisconnectTime = Integer.parseInt(properties.getProperty("allowedDisconnectTime"));
+                        } catch (NumberFormatException e) {
+                            context.getLogger().error("Invalid allowedDisconnectTime set, setting to 1800 seconds (30 min)");
+                        }
                         if (inetAddress.isReachable(300)) {
                             devices.put(inetAddress, serviceInfo.getType());
                             newInetAddressDiscovered(new TrackingObject(
@@ -151,7 +155,7 @@ public class JmDNSDiscoverService extends DiscoverService {
                                     inet -> trackingObjectRemoved(inetAddress),
                                     inetAddress,
                                     first.get(),
-                                    Duration.of(30, ChronoUnit.MINUTES)));
+                                    Duration.of(allowedDisconnectTime, ChronoUnit.SECONDS)));
                             return;
                         }
                     } catch (IOException e) {

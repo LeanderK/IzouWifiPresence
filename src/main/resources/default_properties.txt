@@ -1,4 +1,16 @@
-#you can set Host-Names (the name of the device you want to track) with:
-#hostname_<unique-digit> = <the hostname>
-#like: hostname_13 = Foo-Iphone
-#currently only supports the zeroconf-protocol
+#
+# -------------
+# Wifi Presence
+# -------------
+#
+# You can set devices that you would like to track with:
+# hostname_<unique-digit> = <the hostname of device>
+# Example: hostname_1 = Foo-Iphone
+# currently only supports the zeroconf-protocol
+
+# If the addon should block events when the user is not logged into the network, set wifiPresenceBlock to true
+wifiPresenceBlock = true
+
+# Set the amount of time in seconds that the user's device can be disconnected from wifi before he/she is signaled as
+# absent (a value of at least 10 min is recommended due to random disconnects and other problems)
+allowedDisconnectTime = 1800

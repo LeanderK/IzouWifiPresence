@@ -1,8 +1,11 @@
 package leanderk.izou.wifipresence;
 
+import org.intellimate.izou.events.EventModel;
 import org.intellimate.izou.sdk.Context;
 import org.intellimate.izou.sdk.frameworks.presence.provider.PresenceIndicatorLevel;
 import org.intellimate.izou.sdk.frameworks.presence.provider.template.PresenceConstant;
+import org.intellimate.izou.sdk.properties.PropertiesAssistant;
+import org.intellimate.izou.system.file.FileSubscriber;
 
 import java.net.InetAddress;
 import java.time.LocalDateTime;
@@ -12,6 +15,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -21,7 +25,7 @@ import java.util.stream.Collectors;
  * @author LeanderK
  * @version 1.0
  */
-public class WifiScanner extends PresenceConstant {
+public class WifiScanner extends PresenceConstant implements FileSubscriber {
     public static final String ID = WifiScanner.class.getCanonicalName();
     private static final String PROPERTIES_ID = "hostname_";
     private List<DiscoverService> discoverServiceList = Collections.synchronizedList(new ArrayList<>());
@@ -34,13 +38,13 @@ public class WifiScanner extends PresenceConstant {
     private ScheduledFuture<?> reachabilityFuture;
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private ScheduledFuture<?> checkHostsFuture;
+    private Consumer<PropertiesAssistant> propertiesAssistantConsumer = PropertiesAssistant -> update();
+
 
     public WifiScanner(Context context) {
         super(context, ID, false, PresenceIndicatorLevel.WEAK);
-        getContext().getPropertiesAssistant().getProperties().stringPropertyNames().stream()
-                .filter(key -> key.matches(PROPERTIES_ID + "\\d+"))
-                .map(getContext().getPropertiesAssistant()::getProperty)
-                .forEach(interestedHostNames::add);
+        getContext().getPropertiesAssistant().registerUpdateListener(propertiesAssistantConsumer);
+        update();
         JmDNSDiscoverService jmDNSDiscoverService = new JmDNSDiscoverService(this, getContext());
         discoverServiceList.add(jmDNSDiscoverService);
         scanWifi();
@@ -172,5 +176,34 @@ public class WifiScanner extends PresenceConstant {
         } finally {
             lock.readLock().unlock();
         }
+    }
+
+
+    /**
+     * Very crude way of doing this and it does not solve all the problems (does not restart the service, does not remove
+     * objects currently being tracked etc.) But it does provide a basic way to update devices that should be tracked or not.
+     * Still needs to be fixed.
+     */
+    @Override
+    public void update() {
+        interestedHostNames.clear();
+        getContext().getPropertiesAssistant().getProperties().stringPropertyNames().stream()
+                .filter(key -> key.matches(PROPERTIES_ID + "\\d+"))
+                .map(getContext().getPropertiesAssistant()::getProperty)
+                .forEach(interestedHostNames::add);
+    }
+
+    /**
+     * Controls whether the fired Event should be dispatched to all the listeners. This method should execute quickly.
+     * The user can decide whether event should be dispatched only when present or anytime
+     *
+     * @param eventModel the Event
+     * @return true if it should dispatch, false if not
+     */
+    @Override
+    public boolean controlEvents(EventModel eventModel) {
+        Properties properties = getContext().getPropertiesAssistant().getProperties();
+        boolean wifiPresenceBlock = Boolean.parseBoolean(properties.getProperty("wifiPresenceBlock"));
+        return !wifiPresenceBlock || super.controlEvents(eventModel);
     }
 }
